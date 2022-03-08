@@ -100,6 +100,7 @@ static void AddLightGridLumps( FILE *file, rbspHeader_t& header ){
 	/* allocate temporary buffers */
 	const size_t maxGridPoints = std::min( bspGridPoints.size(), size_t( MAX_MAP_GRID ) );
 	std::vector<bspGridPoint_t> gridPoints;
+	std::vector<hdrGridPoint_t> hdrGridPoints;
 	std::vector<unsigned short> gridArray( bspGridPoints.size() );
 
 	/* for each bsp grid point, find an approximate twin */
@@ -108,6 +109,7 @@ static void AddLightGridLumps( FILE *file, rbspHeader_t& header ){
 	{
 		/* get points */
 		const bspGridPoint_t& in = bspGridPoints[ i ];
+		const rawGridPoint_t& inRaw = rawScaledGridPoints[ i ];
 
 		/* walk existing list */
 		size_t j;
@@ -161,6 +163,19 @@ static void AddLightGridLumps( FILE *file, rbspHeader_t& header ){
 		if ( j >= gridPoints.size() && gridPoints.size() < maxGridPoints ) {
 			gridPoints.push_back( in );
 		}
+
+		// HDR lightgrid is not indexed.
+		if (hdr) {
+			hdrGridPoint_t hdrGridPoint;
+			hdrGridPoint.ambient.set(0.0f);
+			hdrGridPoint.directed.set(0.0f);
+			for (int k = 0; k < MAX_LIGHTMAPS; k++)
+			{
+				hdrGridPoint.ambient += inRaw.ambient[k];
+				hdrGridPoint.directed += inRaw.directed[k];
+			}
+			hdrGridPoints.push_back(hdrGridPoint);
+		}
 	}
 
 	/* swap array */
@@ -170,6 +185,17 @@ static void AddLightGridLumps( FILE *file, rbspHeader_t& header ){
 	/* write lumps */
 	AddLump( file, header.lumps[LUMP_LIGHTGRID], gridPoints );
 	AddLump( file, header.lumps[LUMP_LIGHTARRAY], gridArray );
+
+	if (hdr) {
+		char dirname[1024], filename[1024];
+		strcpy(dirname, source);
+		StripExtension(dirname);
+		sprintf(filename, "%s/" EXTERNAL_HDR_LIGHTGRID, dirname);
+		FILE* file = SafeOpenWrite(filename); 
+		const int length = sizeof(hdrGridPoint_t) * hdrGridPoints.size();
+		SafeWrite(file, hdrGridPoints.data(), length);
+		fclose(file);
+	}
 }
 
 

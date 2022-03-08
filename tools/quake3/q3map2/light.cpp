@@ -1450,12 +1450,14 @@ static void TraceGrid( int num ){
 	float d, step;
 	Vector3 cheapColor, thisdir;
 	rawGridPoint_t          *gp;
+	rawGridPoint_t          *hdrGp;
 	bspGridPoint_t          *bgp;
 	contribution_t contributions[ MAX_CONTRIBUTIONS ];
 	trace_t trace;
 
 	/* get grid points */
 	gp = &rawGridPoints[ num ];
+	hdrGp = &rawScaledGridPoints[ num ];
 	bgp = &bspGridPoints[ num ];
 
 	/* get grid origin */
@@ -1677,6 +1679,12 @@ static void TraceGrid( int num ){
 		/* vortex: apply gridscale and gridambientscale here */
 		bgp->ambient[ i ] = ColorToBytes( color, gridScale * gridAmbientScale );
 		bgp->directed[ i ] = ColorToBytes( gp->directed[ i ], gridScale );
+
+		if (hdr) {
+			hdrGp->ambient[i] = ColorScaleHDR(gp->ambient[i], gridScale * gridAmbientScale);
+			hdrGp->directed[i] = ColorScaleHDR(gp->directed[i], gridScale);
+		}
+
 		/*
 		 * HACK: if there's a non-zero directed component, this
 		 * lightgrid cell is useful. However, q3 skips grid
@@ -1765,6 +1773,11 @@ static void SetupGrid(){
 			{ ambientColor, ambientColor, ambientColor, ambientColor },
 			{ g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity },
 			g_vector3_identity,
+			{ LS_NORMAL, LS_NONE, LS_NONE, LS_NONE } } );
+		rawScaledGridPoints = decltype(rawScaledGridPoints)( numGridPoints, rawGridPoint_t{ // for HDR lightgrid
+			{ Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f) },
+			{ Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f) },
+			Vector3(0.0f),
 			{ LS_NORMAL, LS_NONE, LS_NONE, LS_NONE } } );
 		bspGridPoints = decltype( bspGridPoints )( numGridPoints, bspGridPoint_t{
 			{ Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ) },

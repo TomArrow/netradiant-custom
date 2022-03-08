@@ -181,6 +181,7 @@ enum class EBrushType
 
 #define EXTERNAL_LIGHTMAP       "lm_%04d.tga"
 #define EXTERNAL_HDR_LIGHTMAP	"lm_%04d.hdr"
+#define EXTERNAL_HDR_LIGHTGRID	"lightgrid.raw"
 
 #define MAX_LIGHTMAPS           4           /* RBSP */
 #define MAX_SWITCHED_LIGHTS     32
@@ -1285,6 +1286,12 @@ struct rawGridPoint_t
 	byte styles[ MAX_LIGHTMAPS ];
 };
 
+struct hdrGridPoint_t
+{
+	Vector3 ambient;
+	Vector3 directed;
+};
+
 
 struct surfaceInfo_t
 {
@@ -1621,6 +1628,7 @@ void                        RadCreateDiffuseLights();
 /* light_ydnar.c */
 Vector3b                    ColorToBytes( const Vector3& color, float scale );
 void						ColorScaleHDR(const Vector3& color, float* colorFloats, float scale);
+Vector3						ColorScaleHDR(const Vector3& color, float scale);
 void                        SmoothNormals();
 
 void                        MapRawLightmap( int num );
@@ -2063,6 +2071,7 @@ inline outLightmap_t      *outLightmaps;
 
 /* grid points */
 inline std::vector<rawGridPoint_t> rawGridPoints;
+inline std::vector<rawGridPoint_t> rawScaledGridPoints;
 
 inline int numLuxels;
 inline int numLuxelsMapped;
