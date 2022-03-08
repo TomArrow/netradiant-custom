@@ -140,6 +140,33 @@ Vector3b ColorToBytes( const Vector3& color, float scale ){
 	return sample;
 }
 
+void ColorScaleHDR(const Vector3& color, float* colorFloats, float scale)
+{
+	Vector3 sample;
+
+	/* ydnar: scaling necessary for simulating r_overbrightBits on external lightmaps */
+	if (scale <= 0.0f) {
+		scale = 1.0f;
+	}
+
+	/* make a local copy */
+	sample = color * scale;
+	//VectorScale(color, scale, sample);
+	/* compensate for ingame overbrighting/bitshifting */
+	sample *= (1.0f / lightmapCompensate);
+	//VectorScale(sample, (1.0f / lightmapCompensate), sample);
+
+	/* scale to float range instead of 8-bit one */
+	sample *= (1.0f / 255.0f);
+	//VectorScale(sample, (1.0f / 255.0f), sample);
+
+	/* store it off */
+	colorFloats[0] = sample[0] > 0.0f ? sample[0] : 0.0f;
+	colorFloats[1] = sample[1] > 0.0f ? sample[1] : 0.0f;
+	colorFloats[2] = sample[2] > 0.0f ? sample[2] : 0.0f;
+	colorFloats[3] = 1.0f;
+}
+
 
 
 /* -------------------------------------------------------------------------------

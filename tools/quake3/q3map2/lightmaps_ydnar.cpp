@@ -30,6 +30,10 @@
 
 /* dependencies */
 #include "q3map2.h"
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 #include "bspfile_rbsp.h"
 #include "surface_extra.h"
 #include "timer.h"
@@ -1852,6 +1856,12 @@ static void SetupOutLightmap( rawLightmap_t *lm, outLightmap_t *olm ){
 	/* allocate buffers */
 	olm->lightBits = safe_calloc( ( olm->customWidth * olm->customHeight / 8 ) + 8 );
 	olm->bspLightBytes = safe_calloc( olm->customWidth * olm->customHeight * sizeof( *olm->bspLightBytes ) );
+
+	if (hdr) {
+		olm->bspLightFloats = (float*)safe_malloc(sizeof(float) * olm->customWidth * olm->customHeight * 4);
+		memset(olm->bspLightFloats, 0, sizeof(float) * olm->customWidth * olm->customHeight * 4);
+	}
+
 	if ( deluxemap ) {
 		olm->bspDirBytes = safe_calloc( olm->customWidth * olm->customHeight * sizeof( *olm->bspDirBytes ) );
 	}
@@ -1869,6 +1879,7 @@ static void FindOutLightmaps( rawLightmap_t *lm, bool fastAllocate ){
 	int i, j, k, lightmapNum, xMax, yMax, x = -1, y = -1, sx, sy, ox, oy;
 	outLightmap_t       *olm;
 	surfaceInfo_t       *info;
+	float* HDRpixel;
 	bool ok;
 	int xIncrement, yIncrement;
 
@@ -2157,6 +2168,15 @@ static void FindOutLightmaps( rawLightmap_t *lm, bool fastAllocate ){
 
 				/* store color */
 				olm->bspLightBytes[ oy * olm->customWidth + ox] = ColorToBytes( color, lm->brightness );
+
+				if (hdr)
+				{
+					/* store hdr color */
+					//float* hdrColor = lm->getBspLuxel(lightmapNum, x, y); //BSP_LUXEL(lightmapNum, x, y);
+					Vector3& hdrColor = lm->getBspLuxel(lightmapNum, x, y); //BSP_LUXEL(lightmapNum, x, y);
+					HDRpixel = olm->bspLightFloats + (4 * ((oy * olm->customWidth) + ox));
+					ColorScaleHDR(hdrColor, HDRpixel, lm->brightness);
+				}
 
 				/* store direction */
 				if ( deluxemap ) {
@@ -2922,6 +2942,7 @@ void StoreSurfaceLightmaps( bool fastAllocate ){
 		{
 			free( outLightmaps[ i ].lightBits );
 			free( outLightmaps[ i ].bspLightBytes );
+			free( outLightmaps[i].bspLightFloats );
 		}
 		free( outLightmaps );
 		outLightmaps = NULL;
@@ -3026,6 +3047,17 @@ void StoreSurfaceLightmaps( bool fastAllocate ){
 			sprintf( filename, "%s/" EXTERNAL_LIGHTMAP, dirname, numExtLightmaps );
 			Sys_FPrintf( SYS_VRB, "\nwriting %s", filename );
 			WriteTGA24( filename, olm->bspLightBytes->data(), olm->customWidth, olm->customHeight, true );
+
+			if (hdr)
+			{
+				/* write HDR lightmap */
+				sprintf(filename, "%s/" EXTERNAL_HDR_LIGHTMAP, dirname, numExtLightmaps);
+				Sys_FPrintf(SYS_VRB, "\nwriting %s", filename);
+
+				//stbi_flip_vertically_on_write(1);
+				int exportStatus = stbi_write_hdr(filename, olm->customWidth, olm->customHeight, 4, olm->bspLightFloats);
+			}
+
 			numExtLightmaps++;
 
 			/* write deluxemap */

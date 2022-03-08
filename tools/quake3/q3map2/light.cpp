@@ -2354,6 +2354,10 @@ int LightMain( Args& args ){
 			deluxemap = true;
 			Sys_Printf( "Generating deluxemaps for average light direction\n" );
 		}
+		while ( args.takeArg( "-hdr" ) ) {
+			hdr = true;
+			Sys_Printf("Storing hdr lightmaps externally\n");
+		}
 		while ( args.takeArg( "-deluxemode" ) ) {
 			deluxemode = atoi( args.takeNext() );
 			if ( deluxemode != 1 ) {

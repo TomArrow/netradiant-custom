@@ -180,6 +180,7 @@ enum class EBrushType
    ------------------------------------------------------------------------------- */
 
 #define EXTERNAL_LIGHTMAP       "lm_%04d.tga"
+#define EXTERNAL_HDR_LIGHTMAP	"lm_%04d.hdr"
 
 #define MAX_LIGHTMAPS           4           /* RBSP */
 #define MAX_SWITCHED_LIGHTS     32
@@ -1146,6 +1147,8 @@ struct outLightmap_t
 	byte                *lightBits;
 	Vector3b            *bspLightBytes;
 	Vector3b            *bspDirBytes;
+
+	float* bspLightFloats; // for HDR Lightmaps
 };
 
 struct SuperLuxel{
@@ -1617,6 +1620,7 @@ void                        RadCreateDiffuseLights();
 
 /* light_ydnar.c */
 Vector3b                    ColorToBytes( const Vector3& color, float scale );
+void						ColorScaleHDR(const Vector3& color, float* colorFloats, float scale);
 void                        SmoothNormals();
 
 void                        MapRawLightmap( int num );
@@ -1879,6 +1883,8 @@ inline bool noTrace;
 inline bool noSurfaces;
 inline bool patchShadows;
 inline bool cpmaHack;
+
+inline bool hdr = false;
 
 inline bool deluxemap;
 inline bool debugDeluxemap;
