@@ -1793,7 +1793,7 @@ void DirtyRawLightmap( int rawLightmapNum ){
 	trace.numSurfaces = lm->numLightSurfaces;
 	trace.surfaces = &lightSurfaces[ lm->firstLightSurface ];
 	trace.inhibitRadius = 0.0f;
-	trace.testAll = false;
+	trace.testAll = true;
 
 	/* twosided lighting (may or may not be a good idea for lightmapped stuff) */
 	trace.twoSided = false;
