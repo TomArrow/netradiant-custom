@@ -1681,8 +1681,8 @@ static void TraceGrid( int num ){
 		bgp->directed[ i ] = ColorToBytes( gp->directed[ i ], gridScale );
 
 		if (hdr) {
-			hdrGp->ambient[i] = ColorScaleHDR(gp->ambient[i], gridScale * gridAmbientScale);
-			hdrGp->directed[i] = ColorScaleHDR(gp->directed[i], gridScale);
+			hdrGp->ambient[i] = ColorScaleHDR(gp->ambient[i], gridScale * gridAmbientScale,false);
+			hdrGp->directed[i] = ColorScaleHDR(gp->directed[i], gridScale,false);
 		}
 
 		/*
@@ -2370,6 +2370,18 @@ int LightMain( Args& args ){
 		while ( args.takeArg( "-hdr" ) ) {
 			hdr = true;
 			Sys_Printf("Storing hdr lightmaps externally\n");
+		}
+		while ( args.takeArg( "-hdrLightmapInverseSrgb" ) ) {
+			// With older games, the lightmaps were generated without regard to the color space.
+			// So linear lightmaps were calculated but used as sRGB.
+			// Now if you generate a proper linear HDR lightmap (which is what those "srgb" lightmaps were essentially)
+			// with the old map lighting, everything will become too bright and flat.
+			// So this is kind of a hack to generate a HDR lightmap using classic lighting such that it will look
+			// consistent with how the normal lightmap would have looked. Basically, we pretend that the linear
+			// lightmap data is sRGB (which is what those games pretended and the level designers compensated for)
+			// and then convert from "sRGB" to linear to keep the look consistent.
+			hdrLightmapInverseSrgb = true;
+			Sys_Printf("HDR lightmaps will have inverse sRGB curve applied.\n");
 		}
 		while ( args.takeArg( "-deluxemode" ) ) {
 			deluxemode = atoi( args.takeNext() );

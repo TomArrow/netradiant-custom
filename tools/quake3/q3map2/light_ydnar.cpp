@@ -140,7 +140,7 @@ Vector3b ColorToBytes( const Vector3& color, float scale ){
 	return sample;
 }
 
-void ColorScaleHDR(const Vector3& color, float* colorFloats, float scale)
+void ColorScaleHDR(const Vector3& color, float* colorFloats, float scale, bool applyInverseSRGB)
 {
 	Vector3 sample;
 
@@ -159,6 +159,20 @@ void ColorScaleHDR(const Vector3& color, float* colorFloats, float scale)
 	/* scale to float range instead of 8-bit one */
 	sample *= (1.0f / 255.0f);
 	//VectorScale(sample, (1.0f / 255.0f), sample);
+
+	// With older games, the lightmaps were generated without regard to the color space.
+	// So linear lightmaps were calculated but used as sRGB.
+	// Now if you generate a proper linear HDR lightmap (which is what those "srgb" lightmaps were essentially)
+	// with the old map lighting, everything will become too bright and flat.
+	// So this is kind of a hack to generate a HDR lightmap using classic lighting such that it will look
+	// consistent with how the normal lightmap would have looked. Basically, we pretend that the linear
+	// lightmap data is sRGB (which is what those games pretended and the level designers compensated for)
+	// and then convert from "sRGB" to linear to keep the look consistent.
+	if (applyInverseSRGB) {
+		sample[0] = Image_LinearFloatFromsRGBFloat(sample[0]);
+		sample[1] = Image_LinearFloatFromsRGBFloat(sample[1]);
+		sample[2] = Image_LinearFloatFromsRGBFloat(sample[2]);
+	}
 
 	/* store it off */
 	colorFloats[0] = sample[0];// > 0.0f ? sample[0] : 0.0f;
@@ -167,7 +181,7 @@ void ColorScaleHDR(const Vector3& color, float* colorFloats, float scale)
 	colorFloats[3] = 1.0f;
 }
 
-Vector3 ColorScaleHDR(const Vector3& color, float scale)
+Vector3 ColorScaleHDR(const Vector3& color, float scale, bool applyInverseSRGB)
 {
 	Vector3 sample;
 
@@ -186,6 +200,20 @@ Vector3 ColorScaleHDR(const Vector3& color, float scale)
 	/* scale to float range instead of 8-bit one */
 	sample *= (1.0f / 255.0f);
 	//VectorScale(sample, (1.0f / 255.0f), sample);
+
+	// With older games, the lightmaps were generated without regard to the color space.
+	// So linear lightmaps were calculated but used as sRGB.
+	// Now if you generate a proper linear HDR lightmap (which is what those "srgb" lightmaps were essentially)
+	// with the old map lighting, everything will become too bright and flat.
+	// So this is kind of a hack to generate a HDR lightmap using classic lighting such that it will look
+	// consistent with how the normal lightmap would have looked. Basically, we pretend that the linear
+	// lightmap data is sRGB (which is what those games pretended and the level designers compensated for)
+	// and then convert from "sRGB" to linear to keep the look consistent.
+	if (applyInverseSRGB) {
+		sample[0] = Image_LinearFloatFromsRGBFloat(sample[0]);
+		sample[1] = Image_LinearFloatFromsRGBFloat(sample[1]);
+		sample[2] = Image_LinearFloatFromsRGBFloat(sample[2]);
+	}
 
 	/* store it off */
 	return sample;

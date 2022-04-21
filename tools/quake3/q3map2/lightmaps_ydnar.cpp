@@ -2175,7 +2175,7 @@ static void FindOutLightmaps( rawLightmap_t *lm, bool fastAllocate ){
 					//float* hdrColor = lm->getBspLuxel(lightmapNum, x, y); //BSP_LUXEL(lightmapNum, x, y);
 					Vector3& hdrColor = lm->getBspLuxel(lightmapNum, x, y); //BSP_LUXEL(lightmapNum, x, y);
 					HDRpixel = olm->bspLightFloats + (4 * ((oy * olm->customWidth) + ox));
-					ColorScaleHDR(hdrColor, HDRpixel, lm->brightness);
+					ColorScaleHDR(hdrColor, HDRpixel, lm->brightness, hdrLightmapInverseSrgb);
 				}
 
 				/* store direction */

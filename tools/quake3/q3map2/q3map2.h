@@ -1627,8 +1627,8 @@ void                        RadCreateDiffuseLights();
 
 /* light_ydnar.c */
 Vector3b                    ColorToBytes( const Vector3& color, float scale );
-void						ColorScaleHDR(const Vector3& color, float* colorFloats, float scale);
-Vector3						ColorScaleHDR(const Vector3& color, float scale);
+void						ColorScaleHDR(const Vector3& color, float* colorFloats, float scale,bool applyInverseSRGB);
+Vector3						ColorScaleHDR(const Vector3& color, float scale,bool applyInverseSRGB);
 void                        SmoothNormals();
 
 void                        MapRawLightmap( int num );
@@ -1893,6 +1893,7 @@ inline bool patchShadows;
 inline bool cpmaHack;
 
 inline bool hdr = false;
+inline bool hdrLightmapInverseSrgb = false;
 
 inline bool deluxemap;
 inline bool debugDeluxemap;
