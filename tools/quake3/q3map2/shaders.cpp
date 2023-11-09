@@ -1772,6 +1772,7 @@ static void ParseShaderFile( const char *filename ){
 				text.GetToken( false );
 		}
 
+
 		/* copy shader text to the shaderinfo */
 		text.text << '\n';
 		si->shaderText = copystring( text.text );

@@ -1895,6 +1895,8 @@ inline bool cpmaHack;
 inline bool hdr = false;
 inline bool hdrLightmapInverseSrgb = false;
 
+inline float tessSize = 0.0f;
+
 inline bool deluxemap;
 inline bool debugDeluxemap;
 inline int deluxemode;                  /* deluxemap format (0 - modelspace, 1 - tangentspace with renormalization, 2 - tangentspace without renormalization) */
@@ -1961,6 +1963,7 @@ inline bool lightmapBorder;
 inline int debugSampleSize; // 1=warn; 0=warn if lmsize>128
 
 /* for run time tweaking of light sources */
+inline float processingScale = 1.0f; // Only for the compiling. Will be divided by for saving in map file/lightmaps again.
 inline float pointScale = 7500.0f;
 inline float spotScale = 7500.0f;
 inline float areaScale = 0.25f;

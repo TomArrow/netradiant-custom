@@ -907,6 +907,10 @@ int VisMain( Args& args ){
 			Sys_Printf( "saveprt = true\n" );
 			saveprt = true;
 		}
+		while (args.takeArg("-tessSize")) {
+			tessSize = atof(args.takeNext());
+			Sys_Printf("Set global -tessSize to %f \n", tessSize);
+		}
 		while ( args.takeArg( "-v" ) ) {
 			debugCluster = true;
 			Sys_Printf( "Extra verbose mode enabled\n" );

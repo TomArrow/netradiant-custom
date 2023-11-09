@@ -2181,6 +2181,23 @@ int LightMain( Args& args ){
 			Sys_Printf( "All light scaled by %f\n", f );
 		}
 
+		while ( args.takeArg( "-processingScale" ) ) {
+			f = atof( args.takeNext() );
+			processingScale *= f;
+			pointScale *= f;
+			spotScale *= f;
+			areaScale *= f;
+			skyScale *= f;
+			//bounceScale *= f;
+			Sys_Printf( "All light scaled (for processing!) by %f\n", f );
+		}
+
+		while ( args.takeArg( "-falloffTolerance" ) ) {
+			f = atof( args.takeNext() );
+			falloffTolerance *= f;
+			Sys_Printf( "Falloff tolerance scaled by %f\n", f );
+		}
+
 		while ( args.takeArg( "-gridscale" ) ) {
 			f = atof( args.takeNext() );
 			Sys_Printf( "Grid lightning scaled by %f\n", f );
@@ -2370,6 +2387,10 @@ int LightMain( Args& args ){
 		while ( args.takeArg( "-hdr" ) ) {
 			hdr = true;
 			Sys_Printf("Storing hdr lightmaps externally\n");
+		}
+		while ( args.takeArg( "-tessSize" ) ) {
+			tessSize = atof(args.takeNext());
+			Sys_Printf("Set global -tessSize to %f \n", tessSize);
 		}
 		while ( args.takeArg( "-hdrLightmapInverseSrgb" ) ) {
 			// With older games, the lightmaps were generated without regard to the color space.

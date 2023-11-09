@@ -1227,7 +1227,7 @@ void SubdivideFaceSurfaces( const entity_t& e ){
 
 		/* check subdivision for shader */
 		const shaderInfo_t *si = side.shaderInfo;
-		if ( si == NULL ) {
+		if ( si == NULL && tessSize < 1.0f ) { // If no shader, don't tesselate UNLESS global -tessSize flag.
 			continue;
 		}
 
@@ -1237,7 +1237,13 @@ void SubdivideFaceSurfaces( const entity_t& e ){
 		}
 
 		/* get subdivisions from shader */
-		const float subdivisions = si->subdivisions;
+		float subdivisions = si->subdivisions;
+
+		// Apply global -tessSize
+		if (tessSize >= 1.0f && (subdivisions < 1.0f || (tessSize < subdivisions))) {
+			subdivisions = tessSize;
+		}
+
 		if ( subdivisions < 1.0f ) {
 			continue;
 		}

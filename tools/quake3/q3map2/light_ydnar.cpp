@@ -69,6 +69,8 @@ Vector3b ColorToBytes( const Vector3& color, float scale ){
 	/* make a local copy */
 	Vector3 sample = color * scale;
 
+	sample *= (1.0f / processingScale); // Processing scale is used to increase light brightness during processing and then scaled down again for the output.
+
 	if( g_lightmapSaturation != 1 )
 		color_saturate( sample, g_lightmapSaturation );
 
@@ -152,6 +154,9 @@ void ColorScaleHDR(const Vector3& color, float* colorFloats, float scale, bool a
 	/* make a local copy */
 	sample = color * scale;
 	//VectorScale(color, scale, sample);
+
+	sample *= (1.0f / processingScale); // Processing scale is used to increase light brightness during processing and then scaled down again for the output.
+
 	/* compensate for ingame overbrighting/bitshifting */
 	sample *= (1.0f / lightmapCompensate);
 	//VectorScale(sample, (1.0f / lightmapCompensate), sample);
@@ -193,6 +198,9 @@ Vector3 ColorScaleHDR(const Vector3& color, float scale, bool applyInverseSRGB)
 	/* make a local copy */
 	sample = color * scale;
 	//VectorScale(color, scale, sample);
+
+	sample *= (1.0f / processingScale); // Processing scale is used to increase light brightness during processing and then scaled down again for the output.
+
 	/* compensate for ingame overbrighting/bitshifting */
 	sample *= (1.0f / lightmapCompensate);
 	//VectorScale(sample, (1.0f / lightmapCompensate), sample);

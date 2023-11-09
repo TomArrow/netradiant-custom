@@ -771,6 +771,10 @@ int BSPMain( Args& args ){
 			Sys_Printf( "Creating meta surfaces from brush faces\n" );
 			meta = true;
 		}
+		while (args.takeArg("-tessSize")) {
+			tessSize = atof(args.takeNext());
+			Sys_Printf("Set global -tessSize to %f \n", tessSize);
+		}
 		while ( args.takeArg( "-metaadequatescore" ) ) {
 			metaAdequateScore = std::max( -1, atoi( args.takeNext() ) );
 			if ( metaAdequateScore >= 0 ) {
