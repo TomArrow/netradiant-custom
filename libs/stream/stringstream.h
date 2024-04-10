@@ -104,7 +104,7 @@ public:
 
 	StringOutputStream(){
 	}
-	StringOutputStream( std::size_t capacity ) : m_string( capacity ){
+	explicit StringOutputStream( std::size_t capacity ) : m_string( capacity ){
 	}
 	std::size_t write( const char* buffer, std::size_t length ){
 		m_string.push_range( buffer, buffer + length );
@@ -152,4 +152,11 @@ public:
 template<typename T>
 inline StringOutputStream& operator<<( StringOutputStream& ostream, const T& t ){
 	return ostream_write( ostream, t );
+}
+
+template<std::size_t capacity = 256, typename ... Args>
+StringOutputStream StringStream( Args&& ... args ){
+	StringOutputStream str( capacity );
+	( str << ... << std::forward<Args>( args ) );
+	return str;
 }

@@ -545,7 +545,6 @@ int ScaleBSPMain( Args& args ){
 	/* write the bsp */
 	UnparseEntities();
 	path_set_extension( source, "_s.bsp" );
-	Sys_Printf( "Writing %s\n", source );
 	WriteBSPFile( source );
 
 	/* return to sender */
@@ -649,7 +648,6 @@ int ShiftBSPMain( Args& args ){
 	/* write the bsp */
 	UnparseEntities();
 	path_set_extension( source, "_sh.bsp" );
-	Sys_Printf( "Writing %s\n", source );
 	WriteBSPFile( source );
 
 	/* return to sender */
@@ -778,7 +776,7 @@ int MergeBSPMain( Args& args ){
 		{
 			const char *model = e.valueForKey( "model" );
 			if( model[0] == '*' ){
-				e.setKeyValue( "model", StringOutputStream( 8 )( '*', atoi( model + 1 ) + bspModels.size() - 1 ) ); // -1 : minus world
+				e.setKeyValue( "model", StringStream<8>( '*', atoi( model + 1 ) + bspModels.size() - 1 ) ); // -1 : minus world
 			}
 		}
 		/* make target/targetname names unique */
@@ -934,7 +932,6 @@ int MergeBSPMain( Args& args ){
 	/* write the bsp */
 	UnparseEntities();
 	path_set_extension( source, "_merged.bsp" );
-	Sys_Printf( "Writing %s\n", source );
 	WriteBSPFile( source );
 
 	/* return to sender */
@@ -952,7 +949,7 @@ static void PseudoCompileBSP( bool need_tree ){
 	facelist_t faces;
 	tree_t tree{};
 
-	mapDrawSurfs = safe_calloc( sizeof( mapDrawSurface_t ) * MAX_MAP_DRAW_SURFS );
+	mapDrawSurfs = safe_calloc( sizeof( mapDrawSurface_t ) * max_map_draw_surfs );
 	numMapDrawSurfs = 0;
 
 	BeginBSPFile();
@@ -1148,7 +1145,6 @@ int ConvertBSPMain( Args& args ){
 
 		/* write bsp */
 		path_set_extension( source, "_c.bsp" );
-		Sys_Printf( "Writing %s\n", source );
 		WriteBSPFile( source );
 
 		/* return to sender */

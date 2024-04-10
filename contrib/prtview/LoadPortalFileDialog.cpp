@@ -23,7 +23,6 @@
 #include "LoadPortalFileDialog.h"
 
 #include "stream/stringstream.h"
-#include "convert.h"
 #include "os/path.h"
 
 #include "qerplugin.h"
@@ -71,7 +70,7 @@ bool DoLoadPortalFileDialog(){
 	}
 
 
-	portals.fn = StringOutputStream( 256 )( PathExtensionless( GlobalRadiant().getMapName() ), ".prt" );
+	portals.fn = StringStream( PathExtensionless( GlobalRadiant().getMapName() ), ".prt" );
 
 	line->setText( portals.fn.c_str() );
 	check3d->setChecked( portals.show_3d );

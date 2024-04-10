@@ -295,13 +295,11 @@ static QTimer g_chasemouse_caller;
 
 void XYWnd::ChaseMouse(){
 	const float multiplier = g_chasemouse_timer.elapsed_msec() / 10.0f;
-	if( multiplier != 0 ){ // a lot of zeros happen = torn, slow, inconsistent motion 🤔
-		g_chasemouse_timer.start();
-		Scroll( float_to_integer( multiplier * m_chasemouse_delta_x ), float_to_integer( multiplier * -m_chasemouse_delta_y ) );
-		//globalOutputStream() << "chasemouse: multiplier=" << multiplier << " x=" << m_chasemouse_delta_x << " y=" << m_chasemouse_delta_y << '\n';
+	g_chasemouse_timer.start();
+	Scroll( float_to_integer( multiplier * m_chasemouse_delta_x ), float_to_integer( multiplier * -m_chasemouse_delta_y ) );
+	//globalOutputStream() << "chasemouse: multiplier=" << multiplier << " x=" << m_chasemouse_delta_x << " y=" << m_chasemouse_delta_y << '\n';
 
-		XY_MouseMoved( m_chasemouse_current_x, m_chasemouse_current_y, getButtonState() );
-	}
+	XY_MouseMoved( m_chasemouse_current_x, m_chasemouse_current_y, getButtonState() );
 }
 
 bool XYWnd::chaseMouseMotion( const int x, const int y ){
@@ -332,6 +330,7 @@ bool XYWnd::chaseMouseMotion( const int x, const int y ){
 			if ( !g_chasemouse_caller.isActive() ) {
 				//globalOutputStream() << "chasemouse timer start... ";
 				g_chasemouse_timer.start();
+				g_chasemouse_caller.disconnect(); // disconnect everything
 				g_chasemouse_caller.callOnTimeout( [this](){ ChaseMouse(); } );
 				g_chasemouse_caller.start( 4 ); // with 0 consumes entire thread by spamming calls 🤷‍♀️
 			}
@@ -532,10 +531,10 @@ protected:
 			g_pParentWnd->SetActiveXY( &m_xywnd );
 		}
 		if ( event->angleDelta().y() > 0 ) {
-			m_xywnd.ZoomInWithMouse( event->x() * m_scale, event->y() * m_scale );
+			m_xywnd.ZoomInWithMouse( event->position().x() * m_scale, event->position().y() * m_scale );
 		}
 		else if ( event->angleDelta().y() < 0 ) {
-			m_xywnd.ZoomOutWithMouse( event->x() * m_scale, event->y() * m_scale );
+			m_xywnd.ZoomOutWithMouse( event->position().x() * m_scale, event->position().y() * m_scale );
 		}
 	}
 
@@ -678,7 +677,7 @@ void XYWnd_OrientCamera( XYWnd* xywnd, int x, int y, CamWnd& camwnd ){
 		}
 		Camera_setAngles( camwnd, angles );
 	}
-	//globalOutputStream() << Camera_getAngles( camwnd ) << "\n";
+	//globalOutputStream() << Camera_getAngles( camwnd ) << '\n';
 }
 
 unsigned int SetCustomPivotOrigin_buttons(){
@@ -828,13 +827,13 @@ public:
 		m_stack.push_back( MenuPair( menu, "" ) );
 	}
 	~EntityClassMenuInserter(){
-		if ( !string_empty( m_previous.c_str() ) ) {
+		if ( !m_previous.empty() ) {
 			addItem( m_previous.c_str(), "" );
 		}
 	}
 	void visit( EntityClass* e ){
 		ASSERT_MESSAGE( !string_empty( e->name() ), "entity-class has no name" );
-		if ( !string_empty( m_previous.c_str() ) ) {
+		if ( !m_previous.empty() ) {
 			addItem( m_previous.c_str(), e->name() );
 		}
 		m_previous = e->name();
@@ -1063,11 +1062,10 @@ void XYWnd::XY_MouseMoved( int x, int y, unsigned int buttons ){
 		m_window_observer->onMouseMotion( WindowVector( x, y ), modifiers_for_flags( buttons ) );
 
 		{
-			StringOutputStream status( 64 );
-			status << "x:: " << FloatFormat( m_mousePosition[0], 6, 1 )
-			       << "  y:: " << FloatFormat( m_mousePosition[1], 6, 1 )
-			       << "  z:: " << FloatFormat( m_mousePosition[2], 6, 1 );
-			g_pParentWnd->SetStatusText( c_status_position, status.c_str() );
+			const auto status = StringStream<64>( "x:: ", FloatFormat( m_mousePosition[0], 6, 1 ),
+			                                    "  y:: ", FloatFormat( m_mousePosition[1], 6, 1 ),
+			                                    "  z:: ", FloatFormat( m_mousePosition[2], 6, 1 ) );
+			g_pParentWnd->SetStatusText( c_status_position, status );
 		}
 
 		if ( g_bCrossHairs && button_for_flags( buttons ) == c_buttonInvalid ) { // don't update with a button pressed, observer calls update itself
@@ -1160,17 +1158,14 @@ void BackgroundImage::render( const VIEWTYPE viewtype ){
 #include "qe3.h"
 #include "os/file.h"
 const char* BackgroundImage::background_image_dialog(){
-	StringOutputStream buffer( 1024 );
+	auto buffer = StringStream( g_qeglobals.m_userGamePath, "textures/" );
 
-	buffer << g_qeglobals.m_userGamePath << "textures/";
-
-	if ( !file_readable( buffer.c_str() ) ) {
+	if ( !file_readable( buffer ) ) {
 		// just go to fsmain
-		buffer.clear();
-		buffer << g_qeglobals.m_userGamePath;
+		buffer( g_qeglobals.m_userGamePath );
 	}
 
-	const char *filename = file_dialog( MainFrame_getWindow(), true, "Background Image", buffer.c_str() );
+	const char *filename = file_dialog( MainFrame_getWindow(), true, "Background Image", buffer );
 	if ( filename != 0 ) {
 		// use VFS to get the correct relative path
 		const char* relative = path_make_relative( filename, GlobalFileSystem().findRoot( filename ) );
@@ -1203,16 +1198,16 @@ void BackgroundImage::set( const VIEWTYPE viewtype ){
 		free_tex();
 		const char *filename = background_image_dialog();
 		if( filename ){
-			const auto filename_noext = StringOutputStream( 256 )( PathExtensionless( filename ) );
-			Image *image = QERApp_LoadImage( 0, filename_noext.c_str() );
+			const auto filename_noext = StringStream( PathExtensionless( filename ) );
+			Image *image = QERApp_LoadImage( 0, filename_noext );
 			if ( !image ) {
-				globalErrorStream() << "Could not load texture " << filename_noext.c_str() << "\n";
+				globalErrorStream() << "Could not load texture " << filename_noext << '\n';
 			}
 			else{
 				qtexture_t* qtex = (qtexture_t*)malloc( sizeof( qtexture_t ) ); /* srs hack :E */
 				LoadTextureRGBA( qtex, image->getRGBAPixels(), image->getWidth(), image->getHeight() );
 				if( qtex->texture_number > 0 ){
-					globalOutputStream() << "Loaded background texture " << filename << "\n";
+					globalOutputStream() << "Loaded background texture " << filename << '\n';
 					_tex = qtex->texture_number;
 					_viewtype = viewtype;
 
@@ -1575,7 +1570,7 @@ void XYWnd::XY_DrawBlockGrid(){
 }
 
 void XYWnd::DrawCameraIcon( const Vector3& origin, const Vector3& angles ){
-//	globalOutputStream() << "pitch " << angles[CAMERA_PITCH] << "   yaw " << angles[CAMERA_YAW] << "\n";
+//	globalOutputStream() << "pitch " << angles[CAMERA_PITCH] << "   yaw " << angles[CAMERA_YAW] << '\n';
 	const float fov = 48 / m_fScale;
 	const float box = 16 / m_fScale;
 
@@ -1662,10 +1657,10 @@ void XYWnd::PaintSizeInfo( const int nDim1, const int nDim2 ){
 	gl().glRasterPos3fv( vector3_to_array( v ) );
 	GlobalOpenGL().drawString( dimensions( dimStrings[nDim2], size[nDim2] ) );
 
-	v[nDim1] = min[nDim1] + 4.f;
+	v[nDim1] = min[nDim1] + 4.f / m_fScale;
 	v[nDim2] = max[nDim2] + 5.f / m_fScale;
 	gl().glRasterPos3fv( vector3_to_array( v ) );
-	GlobalOpenGL().drawString( dimensions( "(", dimStrings[nDim1], min[nDim1], "  ", dimStrings[nDim2], max[nDim2], ")" ) );
+	GlobalOpenGL().drawString( dimensions( '(', dimStrings[nDim1], min[nDim1], "  ", dimStrings[nDim2], max[nDim2], ')' ) );
 }
 
 class XYRenderer : public Renderer
@@ -1931,8 +1926,8 @@ void XYWnd::XY_Draw(){
 		gl().glColor3fv( vector3_to_array( g_xywindow_globals.color_viewname ) );
 
 		gl().glRasterPos3f( 2.f, 0.f, 0.0f );
-		extern const char* Renderer_GetStats();
-		GlobalOpenGL().drawString( StringOutputStream( 64 )( Renderer_GetStats(), " | f2f: ", m_render_time.elapsed_msec() ) );
+		extern const char* Renderer_GetStats( int frame2frame );
+		GlobalOpenGL().drawString( Renderer_GetStats( m_render_time.elapsed_msec() ) );
 		m_render_time.start();
 	}
 }

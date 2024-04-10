@@ -70,7 +70,6 @@ StaticRegisterModule staticRegisterEclassDef( StaticEclassDefModule::instance() 
 
 
 char com_token[1024];
-bool com_eof;
 
 /*
    ==============
@@ -95,7 +94,6 @@ skipwhite:
 	while ( ( c = *data ) <= ' ' )
 	{
 		if ( c == 0 ) {
-			com_eof = true;
 			return 0;           // end of file;
 		}
 		data++;
@@ -252,7 +250,6 @@ EntityClass *Eclass_InitFromText( const char *text ){
 	{ // get the flags: advance to the first \n
 		while ( *text && *text++ != '\n' ){};
 		parms = { parms.begin(), text };
-		( *text && ++text );
 	}
 
 	{
@@ -276,7 +273,7 @@ EntityClass *Eclass_InitFromText( const char *text ){
 	e->m_comments = text;
 
 	setSpecialLoad( e, "model=", e->m_modelpath );
-	e->m_modelpath = StringOutputStream( 256 )( PathCleaned( e->m_modelpath.c_str() ) ).c_str();
+	e->m_modelpath = StringStream<64>( PathCleaned( e->m_modelpath.c_str() ) );
 
 	if ( !e->fixedsize ) {
 		EntityClass_insertAttribute( *e, "angle", EntityClassAttribute( "direction", "Direction" ) );
@@ -299,7 +296,7 @@ void Eclass_ScanFile( EntityClassCollector& collector, const char *filename ){
 		globalErrorStream() << "ScanFile: " << filename << " not found\n";
 		return;
 	}
-	globalOutputStream() << "ScanFile: " << filename << "\n";
+	globalOutputStream() << "ScanFile: " << filename << '\n';
 
 	enum EParserState
 	{
@@ -370,7 +367,7 @@ void Eclass_ScanFile( EntityClassCollector& collector, const char *filename ){
 					collector.insert( e );
 				}
 				else{
-					globalErrorStream() << "Error parsing: " << debugname << " in " << filename << "\n";
+					globalErrorStream() << "Error parsing: " << debugname << " in " << filename << '\n';
 				}
 
 				buffer.clear();

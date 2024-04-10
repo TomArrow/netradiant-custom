@@ -100,8 +100,6 @@
 
 #define DEF_RADIOSITY_BOUNCE    1.0f    /* ydnar: default to 100% re-emitted light */
 
-#define MAX_SHADER_INFO         8192
-
 
 /* epair parsing (note case-sensitivity directive) */
 #define CASE_INSENSITIVE_EPAIRS 1
@@ -204,8 +202,6 @@ inline bool style_is_valid( int style ){ return LS_NORMAL <= style && style < LS
 #define MAX_MAP_LIGHTGRID       0x100000    //%	0x800000 /* ydnar: set to points, not bytes */
 #define MAX_MAP_VISCLUSTERS     0x4000 // <= MAX_MAP_LEAFS
 #define MAX_MAP_VISIBILITY      ( VIS_HEADER_SIZE + MAX_MAP_VISCLUSTERS * ( ( ( MAX_MAP_VISCLUSTERS + 63 ) & ~63 ) >> 3 ) )
-
-#define MAX_MAP_DRAW_SURFS      0x20000
 
 /* the editor uses these predefined yaw angles to orient entities up or down */
 #define ANGLE_UP                -1
@@ -756,7 +752,6 @@ struct parseMesh_t
 	indexMap_t          *im;
 
 	/* grouping */
-	bool grouped;
 	float longestCurve;
 	int maxIterations;
 };
@@ -1733,6 +1728,7 @@ void                        InjectCommandLine( const char *stage, const std::vec
 /* general */
 inline shaderInfo_t       *shaderInfo;
 inline int numShaderInfo;
+inline int max_shader_info = 8192;
 
 inline String64 mapName;                 /* ydnar: per-map custom shaders for larger lightmaps */
 inline CopiedString mapShaderFile;
@@ -1840,6 +1836,7 @@ inline EBrushType g_brushType = EBrushType::Undefined;
 /* surface stuff */
 inline mapDrawSurface_t   *mapDrawSurfs;
 inline int numMapDrawSurfs;
+inline int max_map_draw_surfs = 0x20000;
 
 inline int numSurfacesByType[ static_cast<std::size_t>( ESurfaceType::Shader ) + 1 ];
 inline int numStripSurfaces;

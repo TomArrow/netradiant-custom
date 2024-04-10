@@ -40,8 +40,8 @@
 
 mapDrawSurface_t *AllocDrawSurface( ESurfaceType type ){
 	/* bounds check */
-	if ( numMapDrawSurfs >= MAX_MAP_DRAW_SURFS ) {
-		Error( "MAX_MAP_DRAW_SURFS (%d) exceeded", MAX_MAP_DRAW_SURFS );
+	if ( numMapDrawSurfs >= max_map_draw_surfs ) {
+		Error( "max_map_draw_surfs (%d) exceeded, consider -maxmapdrawsurfs to increase", max_map_draw_surfs );
 	}
 	mapDrawSurface_t *ds = &mapDrawSurfs[ numMapDrawSurfs ];
 	numMapDrawSurfs++;
@@ -483,7 +483,7 @@ void ClassifySurfaces( int numSurfs, mapDrawSurface_t *ds ){
 		{
 			ds->planeNum = -1;
 			ds->lightmapVecs[ 2 ].set( 0 );
-			//% if( ds->type == SURF_META || ds->type == SURF_FACE )
+			//% if( ds->type == ESurfaceType::Meta || ds->type == ESurfaceType::Face )
 			//%		Sys_Warning( "Non-planar face (%d): %s\n", ds->planeNum, ds->shaderInfo->shader );
 		}
 
@@ -667,8 +667,8 @@ static shaderInfo_t *GetIndexedShader( const shaderInfo_t *parent, const indexMa
 
 	/* get the shader */
 	shaderInfo_t *si = ShaderInfoForShader( ( minShaderIndex == maxShaderIndex )?
-	                            String64()( "textures/", im->shader.c_str(), '_', int(maxShaderIndex) ):
-	                            String64()( "textures/", im->shader.c_str(), '_', int(minShaderIndex), "to", int(maxShaderIndex) ) );
+	                            String64( "textures/", im->shader, '_', int(maxShaderIndex) ):
+	                            String64( "textures/", im->shader, '_', int(minShaderIndex), "to", int(maxShaderIndex) ) );
 
 	/* inherit a few things from parent shader */
 	if ( parent->globalTexture ) {
@@ -703,7 +703,7 @@ static shaderInfo_t *GetIndexedShader( const shaderInfo_t *parent, const indexMa
 
 /*
    DrawSurfaceForSide()
-   creates a SURF_FACE drawsurface from a given brush side and winding
+   creates a ESurfaceType::Face drawsurface from a given brush side and winding
    stores references to given brush and side
  */
 
@@ -759,10 +759,10 @@ mapDrawSurface_t *DrawSurfaceForSide( const entity_t& e, const brush_t& b, const
 	}
 
 	/* ydnar: sky hack/fix for GL_CLAMP borders on ati cards */
-	if ( skyFixHack && !strEmpty( si->skyParmsImageBase ) ) {
+	if ( skyFixHack && !si->skyParmsImageBase.empty() ) {
 		//%	Sys_FPrintf( SYS_VRB, "Enabling sky hack for shader %s using env %s\n", si->shader, si->skyParmsImageBase );
 		for( const auto suffix : { "_lf", "_rt", "_ft", "_bk", "_up", "_dn" } )
-			DrawSurfaceForShader( String64()( si->skyParmsImageBase, suffix ) );
+			DrawSurfaceForShader( String64( si->skyParmsImageBase, suffix ) );
 	}
 
 	/* ydnar: gs mods */
@@ -1895,8 +1895,6 @@ static int FilterFaceIntoTree( mapDrawSurface_t *ds, tree_t& tree ){
    FilterPatchIntoTree()
    subdivides a patch into an approximate curve and filters it into the tree
  */
-
-#define FILTER_SUBDIVISION      8
 
 static int FilterPatchIntoTree( mapDrawSurface_t *ds, tree_t& tree ){
 	int refs = 0;

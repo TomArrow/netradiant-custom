@@ -39,7 +39,6 @@
 #include <QTimer>
 
 #include "commandlib.h"
-#include "convert.h"
 #include "string/string.h"
 #include "stream/stringstream.h"
 
@@ -97,13 +96,13 @@ private:
 	socket_t *m_pListenSocket;
 	socket_t *m_pInSocket;
 	netmessage_t msg;
-	GPtrArray *m_pCmd;
+	std::vector<CopiedString> m_commands;
 // used to timeout EBeginStep
 	Timer m_timeout_timer;
 	std::size_t m_iCurrentStep;
 	QTimer m_monitoring_timer;
 // name of the map so we can run the engine
-	char    *m_sBSPName;
+	CopiedString m_sBSPName;
 // buffer we use in push mode to receive data directly from the network
 	xmlParserInputBufferPtr m_xmlInputBuffer;
 	xmlParserCtxtPtr m_xmlParserCtxt;
@@ -118,12 +117,10 @@ private:
 
 public:
 	CWatchBSP(){
-		m_pCmd = 0;
 		m_bBSPPlugin = false;
 		m_pListenSocket = NULL;
 		m_pInSocket = NULL;
 		m_eState = EIdle;
-		m_sBSPName = NULL;
 		m_xmlInputBuffer = NULL;
 		m_bNeedCtxtInit = true;
 		m_monitoring_timer.callOnTimeout( [this](){ RoutineProcessing(); } );
@@ -142,17 +139,9 @@ public:
 // called regularly to keep listening
 	void RoutineProcessing();
 // start a monitoring loop with the following steps
-	void DoMonitoringLoop( GPtrArray *pCmd, const char *sBSPName );
+	void DoMonitoringLoop( const std::vector<CopiedString>& commands, const char *sBSPName );
 	void EndMonitoringLoop(){
 		Reset();
-		if ( m_sBSPName ) {
-			string_release( m_sBSPName, string_length( m_sBSPName ) );
-			m_sBSPName = 0;
-		}
-		if ( m_pCmd ) {
-			g_ptr_array_free( m_pCmd, TRUE );
-			m_pCmd = 0;
-		}
 	}
 // close everything - may be called from the outside to abort the process
 	void Reset();
@@ -191,7 +180,7 @@ public:
 			m_string = string;
 	}
 	void ExportWithDefault( const StringImportCallback& importer ) const {
-		importer( m_string.empty()? StringOutputStream( 256 )( m_defaultPrefix, m_getDefault() ) : m_string.c_str() );
+		importer( m_string.empty()? StringStream( m_defaultPrefix, m_getDefault() ) : m_string.c_str() );
 	}
 	void Export( const StringImportCallback& importer ) const {
 		importer( m_string.c_str() );
@@ -316,7 +305,7 @@ CWatchBSP *GetWatchBSP(){
 	return g_pWatchBSP;
 }
 
-void BuildMonitor_Run( GPtrArray* commands, const char* mapName ){
+void BuildMonitor_Run( const std::vector<CopiedString>& commands, const char* mapName ){
 	GetWatchBSP()->DoMonitoringLoop( commands, mapName );
 }
 
@@ -341,11 +330,11 @@ static void abortStream( message_info_t *data ){
 
 static void saxStartElement( message_info_t *data, const xmlChar *name, const xmlChar **attrs ){
 #if 0
-	globalOutputStream() << "<" << name;
+	globalOutputStream() << '<' << name;
 	if ( attrs != 0 ) {
 		for ( const xmlChar** p = attrs; *p != 0; p += 2 )
 		{
-			globalOutputStream() << " " << p[0] << "=" << makeQuoted( p[1] );
+			globalOutputStream() << ' ' << p[0] << '=' << makeQuoted( p[1] );
 		}
 	}
 	globalOutputStream() << ">\n";
@@ -428,7 +417,7 @@ static void saxStartElement( message_info_t *data, const xmlChar *name, const xm
 
 static void saxEndElement( message_info_t *data, const xmlChar *name ){
 #if 0
-	globalOutputStream() << "<" << name << "/>\n";
+	globalOutputStream() << '<' << name << "/>\n";
 #endif
 
 	data->recurse--;
@@ -499,7 +488,7 @@ static void saxCharacters( message_info_t *data, const xmlChar *ch, int len ){
 }
 
 static void saxComment( void *ctx, const xmlChar *msg ){
-	globalOutputStream() << "XML comment: " << reinterpret_cast<const char*>( msg ) << "\n";
+	globalOutputStream() << "XML comment: " << reinterpret_cast<const char*>( msg ) << '\n';
 }
 
 static void saxWarning( void *ctx, const char *msg, ... ){
@@ -509,7 +498,7 @@ static void saxWarning( void *ctx, const char *msg, ... ){
 	va_start( args, msg );
 	vsprintf( saxMsgBuffer, msg, args );
 	va_end( args );
-	globalWarningStream() << "XML warning: " << saxMsgBuffer << "\n";
+	globalWarningStream() << "XML warning: " << saxMsgBuffer << '\n';
 }
 
 static void saxError( void *ctx, const char *msg, ... ){
@@ -519,7 +508,7 @@ static void saxError( void *ctx, const char *msg, ... ){
 	va_start( args, msg );
 	vsprintf( saxMsgBuffer, msg, args );
 	va_end( args );
-	globalErrorStream() << "XML error: " << saxMsgBuffer << "\n";
+	globalErrorStream() << "XML error: " << saxMsgBuffer << '\n';
 }
 
 static void saxFatal( void *ctx, const char *msg, ... ){
@@ -530,7 +519,7 @@ static void saxFatal( void *ctx, const char *msg, ... ){
 	va_start( args, msg );
 	vsprintf( buffer, msg, args );
 	va_end( args );
-	globalErrorStream() << "XML fatal error: " << buffer << "\n";
+	globalErrorStream() << "XML fatal error: " << buffer << '\n';
 }
 
 static xmlSAXHandler saxParser = {
@@ -617,15 +606,13 @@ void CWatchBSP::DoEBeginStep(){
 
 	if ( !m_bBSPPlugin ) {
 		globalOutputStream() << "=== running build command ===\n"
-		                     << static_cast<const char*>( g_ptr_array_index( m_pCmd, m_iCurrentStep ) ) << "\n";
+		                     << m_commands[m_iCurrentStep] << '\n';
 
-		if ( !Q_Exec( NULL, (char *)g_ptr_array_index( m_pCmd, m_iCurrentStep ), NULL, true, false ) ) {
-			StringOutputStream msg( 256 );
-			msg << "Failed to execute the following command: ";
-			msg << reinterpret_cast<const char*>( g_ptr_array_index( m_pCmd, m_iCurrentStep ) );
-			msg << "\nCheck that the file exists and that you don't run out of system resources.\n";
-			globalOutputStream() << msg.c_str();
-			qt_MessageBox( MainFrame_getWindow(), msg.c_str(), "Build monitoring", EMessageBoxType::Error );
+		if ( !Q_Exec( NULL, const_cast<char*>( m_commands[m_iCurrentStep].c_str() ), NULL, true, false ) ) {
+			const auto msg = StringStream( "Failed to execute the following command: ", m_commands[m_iCurrentStep],
+			                               "\nCheck that the file exists and that you don't run out of system resources.\n" );
+			globalOutputStream() << msg;
+			qt_MessageBox( MainFrame_getWindow(), msg, "Build monitoring", EMessageBoxType::Error );
 			return;
 		}
 		// re-initialise the debug window
@@ -644,8 +631,8 @@ void CWatchBSP::RoutineProcessing(){
 		// timeout: if we don't get an incoming connection fast enough, go back to idle
 		if ( m_timeout_timer.elapsed_sec() > g_WatchBSP_Timeout ) {
 			qt_MessageBox( MainFrame_getWindow(),  "The connection timed out, assuming the build process failed\n"
-			                                                      "Make sure you are using a networked version of Q3Map?\n"
-			                                                      "Otherwise you need to disable BSP Monitoring in prefs.", "BSP process monitoring" );
+			                                       "Make sure you are using a networked version of Q3Map?\n"
+			                                       "Otherwise you need to disable BSP Monitoring in prefs.", "BSP process monitoring" );
 			EndMonitoringLoop();
 #if 0
 			if ( m_bBSPPlugin ) {
@@ -731,7 +718,7 @@ void CWatchBSP::RoutineProcessing(){
 #endif
 					// move to next step or finish
 					m_iCurrentStep++;
-					if ( m_iCurrentStep < m_pCmd->len ) {
+					if ( m_iCurrentStep < m_commands.size() ) {
 						DoEBeginStep();
 					}
 					else
@@ -739,36 +726,29 @@ void CWatchBSP::RoutineProcessing(){
 						// launch the engine .. OMG
 						if ( g_WatchBSP_RunQuake ) {
 							globalOutputStream() << "Running engine...\n";
-							auto cmd = StringOutputStream( 256 )( EnginePath_get() );
-							StringOutputStream cmdline;
-
-							const auto buildArgs = [&]( const char *str ){
-								const char *map = strstr( str, "%mapname%" );
-								if( map != nullptr )
-									cmdline << StringRange( str, map ) << m_sBSPName << ( map + strlen( "%mapname%" ) );
-								else
-									cmdline << str;
-							};
-
 							// this is game dependant
-							if ( string_equal( gamemode_get(), "mp" ) && !g_engineExecutableMP.string().empty() ) {
-								cmd << g_engineExecutableMP.string();
-								buildArgs( g_engineArgsMP.string().c_str() );
-							}
-							else
-							{
-								cmd << g_engineExecutable.string();
-								buildArgs( g_engineArgs.string().c_str() );
-							}
+							const auto [exe, args] = [&](){
+								if( string_equal( gamemode_get(), "mp" ) ){
+									if( const auto exe = g_engineExecutableMP.string(); !exe.empty() )
+										return std::pair( std::move( exe ), g_engineArgsMP.string() );
+								}
+								return std::pair( g_engineExecutable.string(), g_engineArgs.string() );
+							}();
 
-							globalOutputStream() << cmd.c_str() << " " << cmdline.c_str() << "\n";
+							auto cmd = StringStream( '"', EnginePath_get(), exe, '"', ' ' );
+
+							if( const char *map = strstr( args.c_str(), "%mapname%" ) )
+								cmd << StringRange( args.c_str(), map ) << m_sBSPName << ( map + strlen( "%mapname%" ) );
+							else
+								cmd << args;
+
+							globalOutputStream() << cmd << '\n';
 
 							// execute now
-							if ( !Q_Exec( cmd.c_str(), (char *)cmdline.c_str(), EnginePath_get(), false, false ) ) {
-								StringOutputStream msg;
-								msg << "Failed to execute the following command: " << cmd.c_str() << cmdline.c_str();
-								globalOutputStream() << msg.c_str();
-								qt_MessageBox( MainFrame_getWindow(),  msg.c_str(), "Build monitoring", EMessageBoxType::Error );
+							if ( !Q_Exec( nullptr, cmd.c_str(), EnginePath_get(), false, false ) ) {
+								const auto msg = StringStream( "Failed to execute the following command: ", cmd, '\n' );
+								globalOutputStream() << msg;
+								qt_MessageBox( MainFrame_getWindow(), msg, "Build monitoring", EMessageBoxType::Error );
 							}
 						}
 						EndMonitoringLoop();
@@ -782,17 +762,8 @@ void CWatchBSP::RoutineProcessing(){
 	}
 }
 
-GPtrArray* str_ptr_array_clone( GPtrArray* array ){
-	GPtrArray* cloned = g_ptr_array_sized_new( array->len );
-	for ( guint i = 0; i < array->len; ++i )
-	{
-		g_ptr_array_add( cloned, g_strdup( (char*)g_ptr_array_index( array, i ) ) );
-	}
-	return cloned;
-}
-
-void CWatchBSP::DoMonitoringLoop( GPtrArray *pCmd, const char *sBSPName ){
-	m_sBSPName = string_clone( sBSPName );
+void CWatchBSP::DoMonitoringLoop( const std::vector<CopiedString>& commands, const char *sBSPName ){
+	m_sBSPName = sBSPName;
 	if ( m_eState != EIdle ) {
 		globalWarningStream() << "WatchBSP got a monitoring request while not idling...\n";
 		// prompt the user, should we cancel the current process and go ahead?
@@ -802,7 +773,7 @@ void CWatchBSP::DoMonitoringLoop( GPtrArray *pCmd, const char *sBSPName ){
 			Reset();
 //		}
 	}
-	m_pCmd = str_ptr_array_clone( pCmd );
+	m_commands = commands;
 	m_iCurrentStep = 0;
 	DoEBeginStep();
 }

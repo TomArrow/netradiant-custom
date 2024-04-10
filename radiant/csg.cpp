@@ -424,7 +424,7 @@ public:
 		return true;
 	}
 	void post( const scene::Path& path, scene::Instance& instance ) const {
-		//globalOutputStream() << path.size() << "\n";
+		//globalOutputStream() << path.size() << '\n';
 		if ( path.top().get().visible() ) {
 			Brush* brush = Node_getBrush( path.top() );
 			if ( brush != 0
@@ -1163,7 +1163,7 @@ void CSG_WrapMerge( const ClipperPoints& clipperPoints ){
 				brush->addFace( *( p.m_face ) );
 			else
 				brush->addPlane( p.m_verts[0], p.m_verts[1], p.m_verts[2], shader, projection );
-//			globalOutputStream() << p.m_plane.normal() << " " << p.m_plane.dist() << " p.m_plane\n";
+//			globalOutputStream() << p.m_plane.normal() << ' ' << p.m_plane.dist() << " p.m_plane\n";
 		}
 		brush->removeEmptyFaces();
 	}
@@ -1195,6 +1195,51 @@ void CSG_WrapMerge( const ClipperPoints& clipperPoints ){
 void CSG_WrapMerge(){
 	UndoableCommand undo( "brushWrapMerge" );
 	CSG_WrapMerge( Clipper_getPlanePoints() );
+}
+
+
+void CSG_Intersect(){
+	brush_vector_t selected_brushes;
+	scene::Node *ultimate_brush_node;
+
+	Scene_forEachVisibleSelectedBrush( [&selected_brushes, &ultimate_brush_node]( BrushInstance& brush ){
+		selected_brushes.push_back( &brush.getBrush() );
+		ultimate_brush_node = brush.path().top().get_pointer();
+	} );
+
+	if ( selected_brushes.empty() ) {
+		globalWarningStream() << "CSG Intersect: No brushes selected.\n";
+		return;
+	}
+
+	if ( selected_brushes.size() < 2 ) {
+		globalWarningStream() << "CSG Intersect: At least two brushes have to be selected.\n";
+		return;
+	}
+
+	UndoableCommand undo( "brushIntersect" );
+
+	Brush* ultimate_brush = selected_brushes.back();
+	selected_brushes.pop_back();
+
+	for ( const Brush *brush : selected_brushes )
+		for ( const FaceSmartPointer& face : *brush )
+			if ( face->contributes() ){
+				const brushsplit_t split = Brush_classifyPlane( *ultimate_brush, face->getPlane().plane3() );
+				if( split.counts[ePlaneFront] != 0 ){
+					ultimate_brush->addFace( *face.get() );
+					ultimate_brush->removeEmptyFaces();
+				}
+			}
+
+	if ( !ultimate_brush->hasContributingFaces() ) {
+		globalWarningStream() << "CSG Intesect: Failed - result would not be convex.\n";
+		GlobalSceneGraph().traverse( BrushDeleteSelected() );
+	}
+	else
+	{
+		GlobalSceneGraph().traverse( BrushDeleteSelected( ultimate_brush_node ) );
+	}
 }
 
 
@@ -1550,6 +1595,7 @@ void CSG_registerCommands(){
 	GlobalCommands_insert( "CSGSubtract", FreeCaller<CSG_Subtract>(), QKeySequence( "Shift+U" ) );
 	GlobalCommands_insert( "CSGMerge", FreeCaller<CSG_Merge>() );
 	GlobalCommands_insert( "CSGWrapMerge", FreeCaller<CSG_WrapMerge>(), QKeySequence( "Ctrl+U" ) );
+	GlobalCommands_insert( "CSGIntersect", FreeCaller<CSG_Intersect>(), QKeySequence( "Ctrl+Shift+U" ) );
 	GlobalCommands_insert( "CSGroom", FreeCaller<CSG_MakeRoom>() );
 	GlobalCommands_insert( "CSGTool", FreeCaller<CSG_Tool>() );
 }

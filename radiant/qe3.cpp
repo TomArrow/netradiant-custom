@@ -37,7 +37,6 @@
 #include "debugging/debugging.h"
 
 #include "ifilesystem.h"
-//#include "imap.h"
 
 #include <map>
 
@@ -59,14 +58,9 @@
 #include "preferences.h"
 #include "watchbsp.h"
 #include "autosave.h"
-#include "convert.h"
 
 QEGlobals_t g_qeglobals;
 
-
-#if defined( WIN32 )
-#define PATH_MAX 260
-#endif
 
 #if defined( POSIX )
 #include <sys/stat.h> // chmod
@@ -166,16 +160,15 @@ void bsp_init(){
 	build_set_variable( "EnginePath", EnginePath_get() );
 	build_set_variable( "UserEnginePath", g_qeglobals.m_userEnginePath.c_str() );
 	for( const auto& path : ExtraResourcePaths_get() )
-		if( !string_empty( path.c_str() ) )
+		if( !path.empty() )
 			stream << " -fs_pakpath " << makeQuoted( path );
 	build_set_variable( "ExtraResourcePaths", stream );
 	build_set_variable( "MonitorAddress", ( g_WatchBSP_Enabled ) ? RADIANT_MONITOR_ADDRESS : "" );
 	build_set_variable( "GameName", gamename_get() );
 
 	const char* mapname = Map_Name( g_map );
-	{
-		build_set_variable( "BspFile", stream( PathExtensionless( mapname ), ".bsp" ) );
-	}
+
+	build_set_variable( "BspFile", stream( PathExtensionless( mapname ), ".bsp" ) );
 
 	if( g_region_active ){
 		build_set_variable( "MapFile", stream( PathExtensionless( mapname ), ".reg" ) );
@@ -184,36 +177,14 @@ void bsp_init(){
 		build_set_variable( "MapFile", mapname );
 	}
 
-	{
-		build_set_variable( "MapName", stream( PathFilename( mapname ) ) );
-	}
+	build_set_variable( "MapName", stream( PathFilename( mapname ) ) );
 }
 
 void bsp_shutdown(){
 	build_clear_variables();
 }
 
-class ArrayCommandListener : public CommandListener
-{
-	GPtrArray* m_array;
-public:
-	ArrayCommandListener(){
-		m_array = g_ptr_array_new();
-	}
-	~ArrayCommandListener(){
-		g_ptr_array_free( m_array, TRUE );
-	}
-
-	void execute( const char* command ){
-		g_ptr_array_add( m_array, g_strdup( command ) );
-	}
-
-	GPtrArray* array() const {
-		return m_array;
-	}
-};
-
-class BatchCommandListener : public CommandListener
+class BatchCommandListener
 {
 	TextOutputStream& m_file;
 	std::size_t m_commandCount;
@@ -226,15 +197,15 @@ public:
 		m_file << command;
 		if( m_outputRedirect ){
 			m_file << ( m_commandCount == 0? " > " : " >> " );
-			m_file << "\"" << m_outputRedirect << "\"";
+			m_file << makeQuoted( m_outputRedirect );
 		}
-		m_file << "\n";
+		m_file << '\n';
 		++m_commandCount;
 	}
 };
 
 
-void RunBSP( const char* name ){
+void RunBSP( size_t buildIdx ){
 	if( !g_region_active )
 		SaveMap();
 
@@ -248,39 +219,32 @@ void RunBSP( const char* name ){
 
 	if ( g_region_active ) {
 		const char* mapname = Map_Name( g_map );
-		Map_SaveRegion( StringOutputStream( 256 )( PathExtensionless( mapname ), ".reg" ).c_str() );
+		Map_SaveRegion( StringStream( PathExtensionless( mapname ), ".reg" ) );
 	}
 
 	Pointfile_Delete();
 
 	bsp_init();
 
-	ArrayCommandListener listener;
-	build_run( name, listener );
-	bool monitor = false;
-	for ( guint i = 0; i < listener.array()->len; ++i )
-		if( strstr( (char*)g_ptr_array_index( listener.array(), i ), RADIANT_MONITOR_ADDRESS ) )
-			monitor = true;
+	const std::vector<CopiedString> commands = build_construct_commands( buildIdx );
+	const bool monitor = std::any_of( commands.cbegin(), commands.cend(), []( const CopiedString& command ){
+		return strstr( command.c_str(), RADIANT_MONITOR_ADDRESS ) != 0;
+	} );
 
 	if ( g_WatchBSP_Enabled && monitor ) {
 		// grab the file name for engine running
 		const char* fullname = Map_Name( g_map );
-		const auto bspname = StringOutputStream( 64 )( PathFilename( fullname ) );
-		BuildMonitor_Run( listener.array(), bspname.c_str() );
+		const auto bspname = StringStream<64>( PathFilename( fullname ) );
+		BuildMonitor_Run( commands, bspname );
 	}
 	else
 	{
-		char junkpath[PATH_MAX];
-		strcpy( junkpath, SettingsPath_get() );
-		strcat( junkpath, "junk.txt" );
+		const auto junkpath = StringStream( SettingsPath_get(), "junk.txt" );
 
-		char batpath[PATH_MAX];
 #if defined( POSIX )
-		strcpy( batpath, SettingsPath_get() );
-		strcat( batpath, "qe3bsp.sh" );
+		const auto batpath = StringStream( SettingsPath_get(), "qe3bsp.sh" );
 #elif defined( WIN32 )
-		strcpy( batpath, SettingsPath_get() );
-		strcat( batpath, "qe3bsp.bat" );
+		const auto batpath = StringStream( SettingsPath_get(), "qe3bsp.bat" );
 #else
 #error "unsupported platform"
 #endif
@@ -291,8 +255,9 @@ void RunBSP( const char* name ){
 #if defined ( POSIX )
 				batchFile << "#!/bin/sh \n\n";
 #endif
-				BatchCommandListener listener( batchFile, g_WatchBSP0_DumpLog? junkpath : 0 );
-				build_run( name, listener );
+				BatchCommandListener listener( batchFile, g_WatchBSP0_DumpLog? junkpath.c_str() : nullptr );
+				for( const auto& command : commands )
+					listener.execute( command.c_str() );
 				written = true;
 			}
 		}
@@ -314,8 +279,7 @@ void RunBSP( const char* name ){
 // Sys_ functions
 
 void Sys_SetTitle( const char *text, bool modified ){
-	StringOutputStream title;
-	title << text;
+	auto title = StringStream( text );
 
 	if ( modified ) {
 		title << " *";

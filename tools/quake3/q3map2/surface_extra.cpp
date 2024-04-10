@@ -134,7 +134,7 @@ void WriteSurfaceExtraFile( const char *path ){
 	Sys_Printf( "--- WriteSurfaceExtraFile ---\n" );
 
 	/* open the file */
-	const auto srfPath = StringOutputStream( 256 )( path, ".srf" );
+	const auto srfPath = StringStream( path, ".srf" );
 	Sys_Printf( "Writing %s\n", srfPath.c_str() );
 	FILE *sf = SafeOpenWrite( srfPath, "wt" );
 
@@ -230,7 +230,7 @@ void LoadSurfaceExtraFile( const char *path ){
 	}
 
 	/* load the file */
-	auto srfPath = StringOutputStream( 256 )( PathExtensionless( path ), ".srf" );
+	const auto srfPath = StringStream( PathExtensionless( path ), ".srf" );
 
 	/* parse the file */
 	if( !LoadScriptFile( srfPath, -1 ) )
@@ -249,7 +249,7 @@ void LoadSurfaceExtraFile( const char *path ){
 		else
 		{
 			const int surfaceNum = atoi( token );
-			if ( surfaceNum < 0 || surfaceNum > MAX_MAP_DRAW_SURFS ) {
+			if ( surfaceNum < 0 ) {
 				Error( "ReadSurfaceExtraFile(): %s, line %d: bogus surface num %d", srfPath.c_str(), scriptline, surfaceNum );
 			}
 			while ( surfaceNum >= numSurfaceExtras )

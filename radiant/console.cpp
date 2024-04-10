@@ -56,11 +56,10 @@ void Sys_LogFile( bool enable ){
 		// open a file to log the console (if user prefs say so)
 		// the file handle is g_hLogFile
 		// the log file is erased
-		StringOutputStream name( 256 );
-		name << SettingsPath_get() << "radiant.log";
-		g_hLogFile = fopen( name.c_str(), "w" );
+		const auto name = StringStream( SettingsPath_get(), "radiant.log" );
+		g_hLogFile = fopen( name, "w" );
 		if ( g_hLogFile != 0 ) {
-			globalOutputStream() << "Started logging to " << name.c_str() << "\n";
+			globalOutputStream() << "Started logging to " << name << '\n';
 			time_t localtime;
 			time( &localtime );
 			globalOutputStream() << "Today is: " << ctime( &localtime )
@@ -75,7 +74,7 @@ void Sys_LogFile( bool enable ){
 		// settings say we should not be logging but still we have an active logfile .. close it
 		time_t localtime;
 		time( &localtime );
-		globalOutputStream() << "Closing log file at " << ctime( &localtime ) << "\n";
+		globalOutputStream() << "Closing log file at " << ctime( &localtime ) << '\n';
 		fclose( g_hLogFile );
 		g_hLogFile = 0;
 	}
@@ -198,44 +197,26 @@ std::size_t Sys_Print( int level, const char* buf, std::size_t length ){
 }
 
 
-class SysPrintOutputStream : public TextOutputStream
+template<int level>
+class SysPrintStream : public TextOutputStream
 {
 public:
 	std::size_t write( const char* buffer, std::size_t length ){
-		return Sys_Print( SYS_STD, buffer, length );
+		return Sys_Print( level, buffer, length );
 	}
 };
-
-class SysPrintErrorStream : public TextOutputStream
-{
-public:
-	std::size_t write( const char* buffer, std::size_t length ){
-		return Sys_Print( SYS_ERR, buffer, length );
-	}
-};
-
-class SysPrintWarningStream : public TextOutputStream
-{
-public:
-	std::size_t write( const char* buffer, std::size_t length ){
-		return Sys_Print( SYS_WRN, buffer, length );
-	}
-};
-
-SysPrintOutputStream g_outputStream;
 
 TextOutputStream& getSysPrintOutputStream(){
-	return g_outputStream;
+	static SysPrintStream<SYS_STD> stream;
+	return stream;
 }
-
-SysPrintWarningStream g_warningStream;
 
 TextOutputStream& getSysPrintWarningStream(){
-	return g_warningStream;
+	static SysPrintStream<SYS_WRN> stream;
+	return stream;
 }
 
-SysPrintErrorStream g_errorStream;
-
 TextOutputStream& getSysPrintErrorStream(){
-	return g_errorStream;
+	static SysPrintStream<SYS_ERR> stream;
+	return stream;
 }
