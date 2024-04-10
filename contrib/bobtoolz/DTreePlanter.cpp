@@ -82,7 +82,7 @@ SignalHandlerResult DTreePlanter::mouseDown( const WindowVector& position, Butto
 
 			if ( pLastEntity ) {
 				DEntity e2;
-				e2.LoadFromEntity( pLastEntity->top(), true );
+				e2.LoadFromEntity( pLastEntity->top(), {.loadPatches = true} );
 				e2.AddEPair( "target", buffer );
 				e2.RemoveFromRadiant();
 				e2.BuildInRadiant( false );
@@ -148,11 +148,8 @@ bool DTreePlanter::FindDropPoint( vec3_t in, vec3_t out ) {
 	bool found = false;
 	vec3_t temp;
 	vec_t dist;
-	int cnt = m_world.GetIDMax();
-	for ( int i = 0; i < cnt; i++ ) {
-		DBrush* pBrush = m_world.GetBrushForID( i );
-
-		if ( pBrush->IntersectsWith( &p1, &p2, temp ) ) {
+	for ( auto *brush : m_world.brushList ) {
+		if ( brush->IntersectsWith( &p1, &p2, temp ) ) {
 			vec3_t diff;
 			vec_t tempdist;
 			VectorSubtract( in, temp, diff );

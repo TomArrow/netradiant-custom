@@ -34,8 +34,6 @@
 #include "DPatch.h"
 #include "DEntity.h"
 
-//#include "dialogs-gtk.h"
-
 #include "misc.h"
 #include "shapes.h"
 
@@ -46,7 +44,6 @@
 bool bFacesAll[6] = {true, true, true, true, true, true};
 
 DShape::DShape(){
-	m_nNextBrush = 0;
 }
 
 DShape::~DShape(){
@@ -97,7 +94,7 @@ void DShape::BuildRegularPrism( vec3_t min, vec3_t max, int nSides, bool bAlignT
 
 	//----------------------------------
 
-	DBrush* pB = m_Container.GetWorldSpawn()->NewBrush( m_nNextBrush++ );
+	DBrush* pB = m_Container.GetWorldSpawn()->NewBrush();
 
 	for ( i = 1; i <= nSides; i++ )
 		pB->AddFace( vc[i - 1], vc[i], vd[i], GetCurrentTexture(), false );
@@ -194,7 +191,7 @@ void DShape::BuildBorderedPrism( vec3_t min, vec3_t max, int nSides, int nBorder
 	VectorScale( origin, 0.5f, origin );
 
 	if ( nBorder >= Min( radius[0], radius[1] ) ) {
-//		DoMessageBox("Border is too large", "Error", MB_OK);
+//		DoMessageBox("Border is too large", "Error", EMessageBoxType::Error);
 		return;
 	}
 
@@ -310,10 +307,10 @@ DBrush* DShape::GetBoundingCube_Ext( vec3_t min, vec3_t max, const char *texture
 DBrush* DShape::GetBoundingCube( vec3_t min, vec3_t max, const char *textureName, DEntity* ent, bool* bUseFaces ){
 	DBrush* pB;
 	if ( ent == NULL ) {
-		pB = m_Container.GetWorldSpawn()->NewBrush( m_nNextBrush++ );
+		pB = m_Container.GetWorldSpawn()->NewBrush();
 	}
 	else{
-		pB = ent->NewBrush( m_nNextBrush++ );
+		pB = ent->NewBrush();
 	}
 
 	//----- Build Outer Bounds ---------

@@ -24,8 +24,10 @@
 #pragma once
 
 #include <list>
+#include <vector>
 #include "str.h"
 #include "mathlib.h"
+#include "DMap.h"
 
 class DEPair;
 class DBrush;
@@ -59,16 +61,14 @@ public:
 //	---------------------------------------------
 
 //	random functions........
-	bool ResetTextures( const char* textureName, float fScale[2], float fShift[2], int rotation, const char* newTextureName, int bResetTextureName, int bResetScale[2], int bResetShift[2], int bResetRotation, bool rebuild );
+	bool ResetTextures( const char* textureName, float fScale[2], float fShift[2], int rotation, const char* newTextureName, bool bResetTextureName, bool bResetScale[2], bool bResetShift[2], bool bResetRotation, bool rebuild );
 	void SaveToFile( FILE* pFile );
 	void SetClassname( const char* classname );
-	int GetIDMax();
 
 	void BuildInRadiant( bool allowDestruction );
 	void ResetChecks( std::list<Str>* exclusionList );
-	void RemoveNonCheckBrushes( std::list<Str>* exclusionList, bool useDetail );
+	void RemoveNonCheckBrushes( std::list<Str>* exclusionList );
 
-	DPlane* AddFaceToBrush( vec3_t va, vec3_t vb, vec3_t vc, _QERFaceData* faceData, int ID );      // slow, try not to use much
 	int GetBrushCount( void );
 	DBrush* FindBrushByPointer( scene::Node& brush );
 //	---------------------------------------------
@@ -84,8 +84,7 @@ public:
 //	brush operations
 	void ClearBrushes();        // clears brush list and frees memory for brushes
 
-	DBrush* GetBrushForID( int ID );
-	DBrush* NewBrush( int ID = -1 );
+	DBrush* NewBrush();
 //	---------------------------------------------
 
 //	patch operations
@@ -96,16 +95,18 @@ public:
 
 //	vars
 	std::list<DEPair*> epairList;
-	std::list<DBrush*> brushList;
+	std::vector<DBrush*> brushList;
 // new patches, wahey!!!
-	std::list<DPatch*> patchList;
+	std::vector<DPatch*> patchList;
 	Str m_Classname;
 //	---------------------------------------------
 
 
 	int FixBrushes();
 
-	bool LoadFromEntity( scene::Node& ent, bool bLoadPatches = false );
+	bool LoadFromEntity( scene::Node& ent, const LoadOptions options = {} );
+	/* these two load any selected primitives to single entity, hence e.g. QER_Entity wont be correct
+	   basically use with high care */
 	void LoadSelectedBrushes();
 	void LoadSelectedPatches();
 
@@ -116,3 +117,5 @@ public:
 	void SpawnFloat( const char* key, const char* defaultstring, float* out );
 	void SpawnVector( const char* key, const char* defaultstring, vec_t* out );
 };
+
+void select_primitive( scene::Node *primitive, scene::Node *entity );

@@ -30,6 +30,7 @@
 
 /* dependencies */
 #include "q3map2.h"
+#include "bspfile_rbsp.h"
 
 
 
@@ -330,8 +331,8 @@ static void CreateEntityLights(){
 			continue;
 		}
 
-		/* lights with target names (and therefore styles) are only parsed from BSP */
-		if ( !strEmpty( e.valueForKey( "targetname" ) ) && i >= numBSPEntities ) {
+		/* lights with target names (and therefore styles in RBSP) are only parsed from BSP */
+		if ( !strEmpty( e.valueForKey( "targetname" ) ) && g_game->load == LoadRBSPFile && i >= numBSPEntities ) {
 			continue;
 		}
 
@@ -427,7 +428,7 @@ static void CreateEntityLights(){
 		/* set origin */
 		light.origin = e.vectorForKey( "origin" );
 		e.read_keyvalue( light.style, "_style", "style" );
-		if ( light.style < LS_NORMAL || light.style >= LS_NONE ) {
+		if ( !style_is_valid( light.style ) ) {
 			Error( "Invalid lightstyle (%d) on entity %zu", light.style, i );
 		}
 
@@ -861,7 +862,7 @@ int LightContributionToSample( trace_t *trace ){
 			}
 
 			/* clamp the distance to prevent super hot spots */
-			dist = std::max( 16.0, sqrt( dist * dist + light->extraDist * light->extraDist ) );
+			dist = std::max( 16.f, std::sqrt( dist * dist + light->extraDist * light->extraDist ) );
 
 			add = light->photons / ( dist * dist ) * angle;
 
@@ -926,7 +927,7 @@ int LightContributionToSample( trace_t *trace ){
 		}
 
 		/* clamp the distance to prevent super hot spots */
-		dist = std::max( 16.0, sqrt( dist * dist + light->extraDist * light->extraDist ) );
+		dist = std::max( 16.f, std::sqrt( dist * dist + light->extraDist * light->extraDist ) );
 
 		/* angle attenuation */
 		if ( light->flags & LightFlags::AttenAngle ) {
@@ -1294,7 +1295,7 @@ static bool LightContributionToPoint( trace_t *trace ){
 	/* ptpff approximation */
 	if ( light->type == ELightType::Area && faster ) {
 		/* clamp the distance to prevent super hot spots */
-		dist = std::max( 16.0, sqrt( dist * dist + light->extraDist * light->extraDist ) );
+		dist = std::max( 16.f, std::sqrt( dist * dist + light->extraDist * light->extraDist ) );
 
 		/* attenuate */
 		add = light->photons / ( dist * dist );
@@ -1342,7 +1343,7 @@ static bool LightContributionToPoint( trace_t *trace ){
 	/* point/spot lights */
 	else if ( light->type == ELightType::Point || light->type == ELightType::Spot ) {
 		/* clamp the distance to prevent super hot spots */
-		dist = std::max( 16.0, sqrt( dist * dist + light->extraDist * light->extraDist ) );
+		dist = std::max( 16.f, std::sqrt( dist * dist + light->extraDist * light->extraDist ) );
 
 		/* attenuate */
 		if ( light->flags & LightFlags::AttenLinear ) {
@@ -1728,7 +1729,7 @@ static void SetupGrid(){
 	/* quantize it */
 	const Vector3 oldGridSize = gridSize;
 	for ( int i = 0; i < 3; i++ )
-		gridSize[ i ] = std::max( 8.0, floor( gridSize[ i ] ) );
+		gridSize[ i ] = std::max( 8.f, std::floor( gridSize[ i ] ) );
 
 	/* ydnar: increase gridSize until grid count is smaller than max allowed */
 	size_t numGridPoints;
@@ -1797,7 +1798,7 @@ static void SetupGrid(){
    does what it says...
  */
 
-static void LightWorld( bool fastAllocate ){
+static void LightWorld( bool fastAllocate, bool bounceStore ){
 	Vector3 color;
 	float f;
 	int b, bt;
@@ -1929,10 +1930,12 @@ static void LightWorld( bool fastAllocate ){
 	while ( bounce > 0 )
 	{
 		/* store off the bsp between bounces */
-		StoreSurfaceLightmaps( fastAllocate );
-		UnparseEntities();
-		Sys_Printf( "Writing %s\n", source );
-		WriteBSPFile( source );
+		StoreSurfaceLightmaps( fastAllocate, bounceStore );
+		if( bounceStore ){
+			UnparseEntities();
+			Sys_Printf( "Writing %s\n", source );
+			WriteBSPFile( source );
+		}
 
 		/* note it */
 		Sys_Printf( "\n--- Radiosity (bounce %d of %d) ---\n", b, bt );
@@ -1951,7 +1954,10 @@ static void LightWorld( bool fastAllocate ){
 		SetupEnvelopes( false, fastbounce );
 		if ( lights.empty() ) {
 			Sys_Printf( "No diffuse light to calculate, ending radiosity.\n" );
-			break;
+			if( bounceStore ){ // already stored, just quit
+				return;
+			}
+			break; // break to StoreSurfaceLightmaps
 		}
 
 		/* add to lightgrid */
@@ -1994,6 +2000,9 @@ static void LightWorld( bool fastAllocate ){
 		bounce--;
 		b++;
 	}
+
+	/* ydnar: store off lightmaps */
+	StoreSurfaceLightmaps( fastAllocate, true );
 }
 
 
@@ -2008,6 +2017,7 @@ int LightMain( Args& args ){
 	int lightmapMergeSize = 0;
 	bool lightSamplesInsist = false;
 	bool fastAllocate = true;
+	bool bounceStore = true;
 
 
 	/* note it */
@@ -2177,7 +2187,6 @@ int LightMain( Args& args ){
 			spotScale *= f;
 			areaScale *= f;
 			skyScale *= f;
-			bounceScale *= f;
 			Sys_Printf( "All light scaled by %f\n", f );
 		}
 
@@ -2491,6 +2500,11 @@ int LightMain( Args& args ){
 		while ( args.takeArg( "-bounceonly" ) ) {
 			bounceOnly = true;
 			Sys_Printf( "Storing bounced light (radiosity) only\n" );
+		}
+
+		while ( args.takeArg( "-nobouncestore" ) ) {
+			bounceStore = false;
+			Sys_Printf( "Not storing BSP, lightmap and shader files between bounces\n" );
 		}
 
 		while ( args.takeArg( "-nocollapse" ) ) {
@@ -2862,10 +2876,7 @@ int LightMain( Args& args ){
 	SetupTraceNodes();
 
 	/* light the world */
-	LightWorld( fastAllocate );
-
-	/* ydnar: store off lightmaps */
-	StoreSurfaceLightmaps( fastAllocate );
+	LightWorld( fastAllocate, bounceStore );
 
 	/* write out the bsp */
 	UnparseEntities();

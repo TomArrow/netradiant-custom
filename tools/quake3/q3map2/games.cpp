@@ -184,6 +184,9 @@ struct game_default : game_t
 		{ "nosteps",        0,                          0,                          Q_SURF_NOSTEPS,             0,                          0,                          0 },
 		{ "nodlight",       0,                          0,                          Q_SURF_NODLIGHT,            0,                          0,                          0 },
 		{ "dust",           0,                          0,                          Q_SURF_DUST,                0,                          0,                          0 },
+
+		{ "opaque",			0,							0,							0,                          0,                          0,							C_TRANSLUCENT },        // TA: Allow playerclip to cast shadows.
+
 	},
 
 	Q_SURF_BEVELSMASK
@@ -818,7 +821,7 @@ struct game_sof2 : game_t
 		/* game */
 		{ "nonsolid",       0,                          S_CONT_SOLID,               0,                          0,                          0,                          C_SOLID },
 		{ "nonopaque",      0,                          S_CONT_OPAQUE,              0,                          0,                          C_TRANSLUCENT,              0 },        /* setting trans ok? */
-
+		
 		{ "trigger",        S_CONT_TRIGGER,             S_CONT_SOLID | S_CONT_OPAQUE,   0,                      0,                          C_TRANSLUCENT,              C_SOLID },
 
 		{ "water",          S_CONT_WATER,               S_CONT_SOLID,               0,                          0,                          C_LIQUID | C_TRANSLUCENT,   C_SOLID },
@@ -885,6 +888,9 @@ struct game_sof2 : game_t
 		{ "*mat_shatterglass",  0,                      0,                          S_MAT_SHATTERGLASS,         S_MAT_MASK,                 0,                          0 },
 		{ "*mat_armor",     0,                          0,                          S_MAT_ARMOR,                S_MAT_MASK,                 0,                          0 },
 		{ "*mat_computer",  0,                          0,                          S_MAT_COMPUTER,             S_MAT_MASK,                 0,                          0 },
+
+		{ "opaque",			S_CONT_OPAQUE,              0,							0,                          0,                          0,							C_TRANSLUCENT },        // TA: Allow playerclip to cast shadows.
+
 	},
 
 	S_SURF_BEVELSMASK
@@ -922,22 +928,22 @@ struct game_ja : game_sof2
 
 const std::vector<game_t> g_games = { game_quake3(),
                                       game_quakelive(),
-									  game_nexuiz(),
-									  game_xonotic(),
-									  game_tremulous(),
-									  game_unvanquished(),
-									  game_tenebrae(),
-									  game_wolf(),
-									  game_wolfet(),
-									  game_etut(),
-									  game_ef(),
-									  game_qfusion(),
-									  game_reaction(),
-									  game_darkplaces(),
-									  game_dq(),
-									  game_prophecy(),
-									  game_sof2(),
-									  game_jk2(),
-									  game_ja(),
-									};
+                                      game_nexuiz(),
+                                      game_xonotic(),
+                                      game_tremulous(),
+                                      game_unvanquished(),
+                                      game_tenebrae(),
+                                      game_wolf(),
+                                      game_wolfet(),
+                                      game_etut(),
+                                      game_ef(),
+                                      game_qfusion(),
+                                      game_reaction(),
+                                      game_darkplaces(),
+                                      game_dq(),
+                                      game_prophecy(),
+                                      game_sof2(),
+                                      game_jk2(),
+                                      game_ja(),
+                                    };
 const game_t *g_game = &g_games[0];

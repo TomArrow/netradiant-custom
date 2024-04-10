@@ -623,7 +623,7 @@ static void FinishShader( shaderInfo_t *si ){
 	}
 
 	/* find pixel coordinates best matching the average color of the image */
-	float bestDist = 99999999;
+	float bestDist = 99999999.f;
 	const Vector2 o( 1.0f / si->shaderImage->width, 1.0f / si->shaderImage->height );
 	for ( y = 0, st[ 1 ] = 0.0f; y < si->shaderImage->height; y++, st[ 1 ] += o[ 1 ] )
 	{
@@ -1256,7 +1256,7 @@ static void ParseShaderFile( const char *filename ){
 				/* q3map_lightStyle (sof2/jk2 lightstyle) */
 				else if ( striEqual( token, "q3map_lightStyle" ) ) {
 					text.GetToken( false );
-					si->lightStyle = std::clamp( atoi( token ), 0, LS_NONE );
+					si->lightStyle = std::clamp( atoi( token ), LS_NORMAL, LS_NONE );
 				}
 
 				/* wolf: q3map_lightRGB <red> <green> <blue> */

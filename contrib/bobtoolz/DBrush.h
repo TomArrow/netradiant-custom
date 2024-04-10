@@ -53,10 +53,10 @@ public:
 	void RotateAboutCentre( vec3_t vRotation );
 
 	DPlane* HasPlaneInverted( DPlane* chkPlane );
-	DPlane* HasPlane( DPlane* chkPlane );
+	DPlane* HasPlane( DPlane* chkPlane ) const;
 	DPlane* AddFace( const vec3_t va, const vec3_t vb, const vec3_t vc, const _QERFaceData* texData );
 
-	bool ResetTextures( const char* textureName, float fScale[2], float fShift[2], int rotation, const char* newTextureName, int bResetTextureName, int bResetScale[2], int bResetShift[2], int bResetRotation );
+	bool ResetTextures( const char* textureName, float fScale[2], float fShift[2], int rotation, const char* newTextureName, bool bResetTextureName, bool bResetScale[2], bool bResetShift[2], bool bResetRotation );
 	bool IsDetail();
 	bool HasTexture( const char* textureName );
 	bool IntersectsWith( DBrush *chkBrush );
@@ -71,6 +71,7 @@ public:
 	void BuildBounds();
 	void BuildFromWinding( DWinding* w );
 	scene::Node* BuildInRadiant( bool allowDestruction, int* changeCnt, scene::Node* entity = NULL );
+	void selectInRadiant() const;
 
 	void ResetChecks( std::list<Str>* exclusionList );
 
@@ -90,17 +91,16 @@ public:
 	DPlane* FindPlaneWithClosestNormal( vec_t* normal );
 	int FindPointsForPlane( DPlane* plane, DPoint** pnts, int maxpnts );
 
-	DBrush( int ID = -1 );
+	DBrush();
 	virtual ~DBrush();
 
-	bool operator==( DBrush* other );
+	bool operator==( const DBrush* other ) const;
 
 //	members
 	scene::Node* QER_entity;
 	scene::Node* QER_brush;
 	std::list<DPlane*> faceList;
 	std::list<DPoint*> pointList;
-	int m_nBrushID;
 	vec3_t bbox_min, bbox_max;
 	bool bBoundsBuilt;
 };

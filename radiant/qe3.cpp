@@ -41,7 +41,7 @@
 
 #include <map>
 
-#include <gtk/gtk.h>
+#include <QWidget>
 
 #include "stream/textfilestream.h"
 #include "commandlib.h"
@@ -86,33 +86,29 @@ void QE_InitVFS(){
 	const char* userRoot = g_qeglobals.m_userEnginePath.c_str();
 	const char* globalRoot = EnginePath_get();
 
-	const char* extrapath = ExtraResourcePath_get();
-	if( !string_empty( extrapath ) )
-		GlobalFileSystem().initDirectory( extrapath );
+	std::vector<CopiedString> paths;
+	const auto paths_push = [&paths]( const char* newPath ){ // collects unique paths
+		if( !string_empty( newPath )
+		&& std::none_of( paths.cbegin(), paths.cend(), [newPath]( const CopiedString& path ){ return path_equal( path.c_str(), newPath ); } ) )
+			paths.emplace_back( newPath );
+	};
+
+
+	for( const auto& path : ExtraResourcePaths_get() )
+		paths_push( path.c_str() );
 
 	StringOutputStream str( 256 );
-	// if we have a mod dir
-	if ( !string_equal( gamename, basegame ) ) {
-		// ~/.<gameprefix>/<fs_game>
-		if ( !string_equal( globalRoot, userRoot ) ) {
-			GlobalFileSystem().initDirectory( str( userRoot, gamename, '/' ) ); // userGamePath
-		}
-
-		// <fs_basepath>/<fs_game>
-		{
-			GlobalFileSystem().initDirectory( str( globalRoot, gamename, '/' ) ); // globalGamePath
-		}
-	}
-
+	// ~/.<gameprefix>/<fs_game>
+	paths_push( str( userRoot, gamename, '/' ) ); // userGamePath
+	// <fs_basepath>/<fs_game>
+	paths_push( str( globalRoot, gamename, '/' ) ); // globalGamePath
 	// ~/.<gameprefix>/<fs_main>
-	if ( !string_equal( globalRoot, userRoot ) ) {
-		GlobalFileSystem().initDirectory( str( userRoot, basegame, '/' ) ); // userBasePath
-	}
-
+	paths_push( str( userRoot, basegame, '/' ) ); // userBasePath
 	// <fs_basepath>/<fs_main>
-	{
-		GlobalFileSystem().initDirectory( str( globalRoot, basegame, '/' ) ); // globalBasePath
-	}
+	paths_push( str( globalRoot, basegame, '/' ) ); // globalBasePath
+
+	for( const auto& path : paths )
+		GlobalFileSystem().initDirectory( path.c_str() );
 }
 
 
@@ -144,9 +140,9 @@ bool ConfirmModified( const char* title ){
 		return true;
 	}
 
-	EMessageBoxReturn result = gtk_MessageBox( GTK_WIDGET( MainFrame_getWindow() ),
+	EMessageBoxReturn result = qt_MessageBox( MainFrame_getWindow(),
 	                                           "The current map has changed since it was last saved.\nDo you want to save the current map before continuing?",
-	                                           title, eMB_YESNOCANCEL, eMB_ICONQUESTION );
+	                                           title, EMessageBoxType::Question, eIDYES | eIDNO | eIDCANCEL );
 	if ( result == eIDCANCEL ) {
 		return false;
 	}
@@ -159,21 +155,24 @@ bool ConfirmModified( const char* title ){
 			return Map_Save();
 		}
 	}
-	return true;
+	return true; // eIDNO
 }
 
 void bsp_init(){
+	StringOutputStream stream( 256 );
+
 	build_set_variable( "RadiantPath", AppPath_get() );
 	build_set_variable( "ExecutableType", RADIANT_EXECUTABLE );
 	build_set_variable( "EnginePath", EnginePath_get() );
 	build_set_variable( "UserEnginePath", g_qeglobals.m_userEnginePath.c_str() );
-	build_set_variable( "ExtraResoucePath", string_empty( ExtraResourcePath_get() )? ""
-	                                       : StringOutputStream()( " -fs_pakpath ", makeQuoted( ExtraResourcePath_get() ) ) );
+	for( const auto& path : ExtraResourcePaths_get() )
+		if( !string_empty( path.c_str() ) )
+			stream << " -fs_pakpath " << makeQuoted( path );
+	build_set_variable( "ExtraResourcePaths", stream );
 	build_set_variable( "MonitorAddress", ( g_WatchBSP_Enabled ) ? RADIANT_MONITOR_ADDRESS : "" );
 	build_set_variable( "GameName", gamename_get() );
 
 	const char* mapname = Map_Name( g_map );
-	StringOutputStream stream( 256 );
 	{
 		build_set_variable( "BspFile", stream( PathExtensionless( mapname ), ".bsp" ) );
 	}
@@ -322,25 +321,5 @@ void Sys_SetTitle( const char *text, bool modified ){
 		title << " *";
 	}
 
-	gtk_window_set_title( MainFrame_getWindow(), title.c_str() );
-}
-
-bool g_bWaitCursor = false;
-
-void Sys_BeginWait(){
-	ScreenUpdates_Disable( "Processing...", "Please Wait" );
-	GdkCursor *cursor = gdk_cursor_new( GDK_WATCH );
-	gdk_window_set_cursor( gtk_widget_get_window( GTK_WIDGET( MainFrame_getWindow() ) ), cursor );
-	gdk_cursor_unref( cursor );
-	g_bWaitCursor = true;
-}
-
-void Sys_EndWait(){
-	ScreenUpdates_Enable();
-	gdk_window_set_cursor( gtk_widget_get_window( GTK_WIDGET( MainFrame_getWindow() ) ), 0 );
-	g_bWaitCursor = false;
-}
-
-void Sys_Beep(){
-	gdk_beep();
+	MainFrame_getWindow()->setWindowTitle( title.c_str() );
 }
