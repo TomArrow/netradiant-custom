@@ -1623,6 +1623,7 @@ static void TraceGrid( int num ){
 		if ( j >= numStyles ) {
 			/* add a new style */
 			if ( numStyles < MAX_LIGHTMAPS ) {
+				hdrGp->styles[ numStyles ] = contributions[ i ].style;
 				gp->styles[ numStyles ] = contributions[ i ].style;
 				bgp->styles[ numStyles ] = contributions[ i ].style;
 				numStyles++;
@@ -1709,6 +1710,7 @@ static void TraceGrid( int num ){
 
 	/* store direction */
 	NormalToLatLong( thisdir, bgp->latLong );
+	hdrGp->dir = thisdir;
 }
 
 

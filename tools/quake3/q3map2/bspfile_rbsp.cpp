@@ -95,12 +95,17 @@ static void CopyLightGridLumps( rbspHeader_t *header ){
 		bspGridPoints.push_back( gridPoints[ id ] );
 }
 
+#define HDR_VERSION 2
 
 static void AddLightGridLumps( FILE *file, rbspHeader_t& header ){
 	/* allocate temporary buffers */
 	const size_t maxGridPoints = std::min( bspGridPoints.size(), size_t( MAX_MAP_GRID ) );
 	std::vector<bspGridPoint_t> gridPoints;
+#if HDR_VERSION==2
+	std::vector<bspGridPointHDR_t> hdrGridPointsV2; // new improved version that resembles the normal bsp layout including style support, just with floats
+#else
 	std::vector<hdrGridPoint_t> hdrGridPoints;
+#endif
 	std::vector<unsigned short> gridArray( bspGridPoints.size() );
 
 	/* for each bsp grid point, find an approximate twin */
@@ -166,6 +171,18 @@ static void AddLightGridLumps( FILE *file, rbspHeader_t& header ){
 
 		// HDR lightgrid is not indexed.
 		if (hdr) {
+
+#if HDR_VERSION==2
+			bspGridPointHDR_t hdrGridPointV2;
+			for (int k = 0; k < MAX_LIGHTMAPS; k++)
+			{
+				hdrGridPointV2.ambient[k] = inRaw.ambient[k];
+				hdrGridPointV2.directed[k] = inRaw.directed[k];
+				hdrGridPointV2.styles[k] = inRaw.styles[k];
+			}
+			hdrGridPointV2.direction = inRaw.dir;
+			hdrGridPointsV2.push_back(hdrGridPointV2);
+#else
 			hdrGridPoint_t hdrGridPoint;
 			hdrGridPoint.ambient.set(0.0f);
 			hdrGridPoint.directed.set(0.0f);
@@ -175,6 +192,7 @@ static void AddLightGridLumps( FILE *file, rbspHeader_t& header ){
 				hdrGridPoint.directed += inRaw.directed[k];
 			}
 			hdrGridPoints.push_back(hdrGridPoint);
+#endif
 		}
 	}
 
@@ -187,6 +205,16 @@ static void AddLightGridLumps( FILE *file, rbspHeader_t& header ){
 	AddLump( file, header.lumps[LUMP_LIGHTARRAY], gridArray );
 
 	if (hdr) {
+#if HDR_VERSION==2
+		char dirname[1024], filename[1024];
+		strcpy(dirname, source);
+		StripExtension(dirname);
+		sprintf(filename, "%s/" EXTERNAL_HDR_LIGHTGRID, dirname);
+		FILE* file = SafeOpenWrite(filename);
+		const size_t length = sizeof(bspGridPointHDR_t) * hdrGridPointsV2.size();
+		SafeWrite(file, hdrGridPointsV2.data(), length);
+		fclose(file);
+#else
 		char dirname[1024], filename[1024];
 		strcpy(dirname, source);
 		StripExtension(dirname);
@@ -195,6 +223,7 @@ static void AddLightGridLumps( FILE *file, rbspHeader_t& header ){
 		const int length = sizeof(hdrGridPoint_t) * hdrGridPoints.size();
 		SafeWrite(file, hdrGridPoints.data(), length);
 		fclose(file);
+#endif
 	}
 }
 

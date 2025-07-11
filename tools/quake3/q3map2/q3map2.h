@@ -316,6 +316,13 @@ enum bspSurfaceType_t
 };
 
 
+struct bspGridPointHDR_t
+{
+	Vector3 ambient[ MAX_LIGHTMAPS ];    /* RBSP - array */
+	Vector3 directed[ MAX_LIGHTMAPS ];   /* RBSP - array */
+	byte styles[ MAX_LIGHTMAPS ];         /* RBSP - whole */
+	Vector3 direction;
+};
 struct bspGridPoint_t
 {
 	Vector3b ambient[ MAX_LIGHTMAPS ];    /* RBSP - array */
