@@ -1154,6 +1154,7 @@ struct outLightmap_t
 	Vector3b            *bspDirBytes;
 
 	float* bspLightFloats; // for HDR Lightmaps
+	float* bspDeLightFloats; // for HDR deluxe maps
 };
 
 struct SuperLuxel{

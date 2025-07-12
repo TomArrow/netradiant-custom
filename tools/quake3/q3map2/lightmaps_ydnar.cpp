@@ -1863,6 +1863,10 @@ static void SetupOutLightmap( rawLightmap_t *lm, outLightmap_t *olm ){
 
 	if ( deluxemap ) {
 		olm->bspDirBytes = safe_calloc( olm->customWidth * olm->customHeight * sizeof( *olm->bspDirBytes ) );
+		if (hdr) {
+			olm->bspDeLightFloats = (float*)safe_malloc(sizeof(float) * olm->customWidth * olm->customHeight * 4);
+			memset(olm->bspDeLightFloats, 0, sizeof(float) * olm->customWidth * olm->customHeight * 4);
+		}
 	}
 }
 
@@ -2180,8 +2184,22 @@ static void FindOutLightmaps( rawLightmap_t *lm, bool fastAllocate ){
 				/* store direction */
 				if ( deluxemap ) {
 					/* normalize average light direction */
-					const Vector3 direction = VectorNormalized( lm->getBspDeluxel( x, y ) * 1000.0f ) * 127.5f;
-					olm->bspDirBytes[ oy * olm->customWidth + ox ] = direction + Vector3( 127.5f );
+					const Vector3 direction = VectorNormalized( lm->getBspDeluxel( x, y ) * 1000.0f );
+					olm->bspDirBytes[ oy * olm->customWidth + ox ] = direction * 127.5f + Vector3( 127.5f );
+
+					if (hdr)
+					{
+						/* store hdr color */
+						//float* hdrColor = lm->getBspLuxel(lightmapNum, x, y); //BSP_LUXEL(lightmapNum, x, y);
+						//Vector3& hdrColor = lm->getBspDeluxel(x, y); //BSP_LUXEL(lightmapNum, x, y);
+						HDRpixel = olm->bspDeLightFloats + (4 * ((oy * olm->customWidth) + ox));
+						HDRpixel[0] = direction[0] * 0.5f + 0.5f;
+						HDRpixel[1] = direction[1] * 0.5f + 0.5f;
+						HDRpixel[2] = direction[2] * 0.5f + 0.5f;
+						HDRpixel[3] = 1.0f;
+						//ColorScaleHDR(hdrColor, HDRpixel, lm->brightness, false); // todo this isnt gonna work well with hdrLightmapInverseSrgb... bring hdrLightmapInverseSrgb back into it somehow
+						//ColorScaleHDR(hdrColor, HDRpixel, lm->brightness, false);
+					}
 				}
 			}
 		}
@@ -2945,6 +2963,9 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 				free( outLightmaps[ i ].lightBits );
 				free( outLightmaps[ i ].bspLightBytes );
 				free( outLightmaps[i].bspLightFloats );
+				if (deluxemap) {
+					free(outLightmaps[i].bspDeLightFloats);
+				}
 			}
 			free( outLightmaps );
 			outLightmaps = NULL;
@@ -3069,6 +3090,17 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 					sprintf( filename, "%s/" EXTERNAL_LIGHTMAP, dirname, numExtLightmaps );
 					Sys_FPrintf( SYS_VRB, "\nwriting %s", filename );
 					WriteTGA24( filename, olm->bspDirBytes->data(), olm->customWidth, olm->customHeight, true );
+
+					if (hdr)
+					{
+						/* write HDR lightmap */
+						sprintf(filename, "%s/" EXTERNAL_HDR_LIGHTMAP, dirname, numExtLightmaps);
+						Sys_FPrintf(SYS_VRB, "\nwriting %s", filename);
+
+						//stbi_flip_vertically_on_write(1);
+						int exportStatus = stbi_write_hdr(filename, olm->customWidth, olm->customHeight, 4, olm->bspDeLightFloats);
+					}
+
 					numExtLightmaps++;
 
 					if ( debugDeluxemap ) {

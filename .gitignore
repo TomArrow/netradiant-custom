@@ -6,3 +6,4 @@ install
 .vs
 x64-Debug
 .idea
+build
