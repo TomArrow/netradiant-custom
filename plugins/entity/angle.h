@@ -58,12 +58,12 @@ inline void write_angle( float angle, Entity* entity ){
 
 class AngleKey
 {
-	Callback m_angleChanged;
+	Callback<void()> m_angleChanged;
 public:
 	float m_angle;
 
 
-	AngleKey( const Callback& angleChanged )
+	AngleKey( const Callback<void()>& angleChanged )
 		: m_angleChanged( angleChanged ), m_angle( ANGLEKEY_IDENTITY ){
 	}
 
@@ -71,16 +71,20 @@ public:
 		read_angle( m_angle, value );
 		m_angleChanged();
 	}
-	typedef MemberCaller1<AngleKey, const char*, &AngleKey::angleChanged> AngleChangedCaller;
+	typedef MemberCaller<AngleKey, void(const char*), &AngleKey::angleChanged> AngleChangedCaller;
 
 	void write( Entity* entity ) const {
 		write_angle( m_angle, entity );
 	}
 };
 
-inline float float_snapped_to_zero( float value ){
-	return fabs( value ) < 1e-6 ? 0.f : value;
-}
+/*
+zero snap angle value to avoid scientific notation after sprinf %g
+it's not supported in e.g. Q3:
+https://github.com/id-Software/Quake-III-Arena/blob/master/code/game/bg_lib.c#L910
+0.0001f is least value, which produces no scientific notation, must be good nuff precision too 🤞🏿
+*/
+const float ANGLEKEY_SMALLEST = 0.0001f;
 
 inline float angle_rotated( float angle, const Quaternion& rotation ){
 	return float_snapped_to_zero(
@@ -89,6 +93,7 @@ inline float angle_rotated( float angle, const Quaternion& rotation ){
 	                   matrix4_rotation_for_quaternion_quantised( rotation ),
 	                   matrix4_rotation_for_z_degrees( angle )
 	               )
-	           ).z()
+	           ).z(),
+	           ANGLEKEY_SMALLEST
 	       );
 }

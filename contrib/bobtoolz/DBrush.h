@@ -25,8 +25,9 @@
 
 #include <cstdio>
 #include <list>
+#include <vector>
 #include "mathlib.h"
-#include "str.h"
+#include "string/string.h"
 
 class DPlane;
 class DWinding;
@@ -73,7 +74,7 @@ public:
 	scene::Node* BuildInRadiant( bool allowDestruction, int* changeCnt, scene::Node* entity = NULL );
 	void selectInRadiant() const;
 
-	void ResetChecks( std::list<Str>* exclusionList );
+	void ResetChecks( const std::vector<CopiedString>& exclusionList );
 
 	void ClearFaces();
 	void ClearPoints();
@@ -92,6 +93,7 @@ public:
 	int FindPointsForPlane( DPlane* plane, DPoint** pnts, int maxpnts );
 
 	DBrush();
+	DBrush( DBrush&& ) noexcept = delete;
 	virtual ~DBrush();
 
 	bool operator==( const DBrush* other ) const;

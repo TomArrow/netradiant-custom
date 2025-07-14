@@ -105,39 +105,33 @@ inline Matrix4 matrix4_rotation_for_euler_xyz_degrees_quantised( const Vector3& 
 	return matrix4_rotation_for_euler_xyz_degrees( angles );
 }
 
-inline Vector3 angles_snapped_to_zero( const Vector3& angles ){
-	const float epsilon = ( fabs( angles[0] ) > 0.001f || fabs( angles[1] ) > 0.001f || fabs( angles[2] ) > 0.001f ) ? 5e-5 : 1e-6;
-	return Vector3( fabs( angles[0] ) < epsilon ? 0.f : angles[0],
-	                fabs( angles[1] ) < epsilon ? 0.f : angles[1],
-	                fabs( angles[2] ) < epsilon ? 0.f : angles[2]
-	              );
-}
-
 inline Vector3 angles_rotated( const Vector3& angles, const Quaternion& rotation ){
-	return angles_snapped_to_zero(
+	return vector3_snapped_to_zero(
 	           matrix4_get_rotation_euler_xyz_degrees(
 	               matrix4_multiplied_by_matrix4(
 	                   matrix4_rotation_for_quaternion_quantised( rotation ),
 	                   matrix4_rotation_for_euler_xyz_degrees_quantised( angles )
 	               )
-	           )
+	           ),
+	           ANGLEKEY_SMALLEST
 	       );
 }
 #if 0
 inline Vector3 angles_rotated_for_rotated_pivot( const Vector3& angles, const Quaternion& rotation ){
-	return angles_snapped_to_zero(
+	return vector3_snapped_to_zero(
 	           matrix4_get_rotation_euler_xyz_degrees(
 	               matrix4_multiplied_by_matrix4(
 	                   matrix4_rotation_for_euler_xyz_degrees_quantised( angles ),
 	                   matrix4_rotation_for_quaternion_quantised( rotation )
 	               )
-	           )
+	           ),
+	           ANGLEKEY_SMALLEST
 	       );
 }
 #endif
 class AnglesKey
 {
-	Callback m_anglesChanged;
+	Callback<void()> m_anglesChanged;
 	KeyObserver m_angleCB;
 	KeyObserver m_anglesCB;
 	const Entity& m_entity;
@@ -145,7 +139,7 @@ public:
 	Vector3 m_angles;
 
 
-	AnglesKey( const Callback& anglesChanged, const Entity& entity )
+	AnglesKey( const Callback<void()>& anglesChanged, const Entity& entity )
 		: m_anglesChanged( anglesChanged ), m_angleCB(), m_anglesCB(), m_entity( entity ), m_angles( ANGLESKEY_IDENTITY ){
 	}
 
@@ -156,7 +150,7 @@ public:
 		}
 	}
 	KeyObserver getAngleChangedCallback(){
-		return m_angleCB = MemberCaller1<AnglesKey, const char*, &AnglesKey::angleChanged>( *this );
+		return m_angleCB = MemberCaller<AnglesKey, void(const char*), &AnglesKey::angleChanged>( *this );
 	}
 
 	void groupAngleChanged( const char* value ){
@@ -166,7 +160,7 @@ public:
 		}
 	}
 	KeyObserver getGroupAngleChangedCallback(){
-		return m_angleCB = MemberCaller1<AnglesKey, const char*, &AnglesKey::groupAngleChanged>( *this );
+		return m_angleCB = MemberCaller<AnglesKey, void(const char*), &AnglesKey::groupAngleChanged>( *this );
 	}
 
 	void anglesChanged( const char* value ){
@@ -178,7 +172,7 @@ public:
 			m_angleCB( m_entity.getKeyValue( "angle" ) );
 	}
 	KeyObserver getAnglesChangedCallback(){
-		return m_anglesCB = MemberCaller1<AnglesKey, const char*, &AnglesKey::anglesChanged>( *this );
+		return m_anglesCB = MemberCaller<AnglesKey, void(const char*), &AnglesKey::anglesChanged>( *this );
 	}
 
 	void write( Entity* entity ) const {

@@ -19,7 +19,6 @@
 
 
 
-#include "str.h"
 #include "qerplugin.h"
 #include "mathlib.h"
 #include "string/string.h"
@@ -42,14 +41,8 @@ void BobToolz_construct(){
 void BobToolz_destroy(){
 	g_PathView.reset();
 	g_VisView.reset();
-	if ( g_TrainView ) {
-		delete g_TrainView;
-		g_TrainView = NULL;
-	}
-	if ( g_TreePlanter ) {
-		delete g_TreePlanter;
-		g_TreePlanter = NULL;
-	}
+	g_TrainView.reset();
+	g_TreePlanter.reset();
 }
 
 // plugin name
@@ -59,6 +52,7 @@ const char* PLUGIN_NAME = "bobToolz";
 constexpr char PLUGIN_COMMANDS[] = "About...,"
                                    "-,"
                                    "Stair Builder...,"
+                                   "Aperture Door...,"
                                    "Door Builder...,"
                                    "Find Duplicates,"
                                    "Intersect...,"
@@ -73,6 +67,7 @@ constexpr char PLUGIN_COMMANDS[] = "About...,"
                                    "Polygon Builder,"
                                    "Caulk Selection,"
                                    "-,"
+                                   "Explode Entity,"
                                    "Tree Planter,"
                                    "Drop Entity,"
                                    "Plot Splines,"
@@ -158,6 +153,9 @@ extern "C" void QERPlug_Dispatch( const char *p, vec3_t vMin, vec3_t vMax, bool 
 	else if ( string_equal_nocase( p, "door builder..." ) ) {
 		DoBuildDoors();
 	}
+	else if ( string_equal_nocase( p, "aperture door..." ) ) {
+		DoBuildApertureDoors();
+	}
 	else if ( string_equal_nocase( p, "intersect..." ) ) {
 		DoIntersect();
 	}
@@ -169,6 +167,9 @@ extern "C" void QERPlug_Dispatch( const char *p, vec3_t vMin, vec3_t vMax, bool 
 	}
 	else if ( string_equal_nocase( p, "path plotter..." ) ) {
 		DoPathPlotter();
+	}
+	else if ( string_equal_nocase( p, "explode entity" ) ) {
+		DoExplodeEntity();
 	}
 	else if ( string_equal_nocase( p, "about..." ) ) {
 		DoMessageBox( PLUGIN_ABOUT, "About" );
