@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <cctype>
 #include "string/string.h"
 #include "container/array.h"

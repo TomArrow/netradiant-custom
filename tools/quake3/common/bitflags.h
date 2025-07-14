@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <type_traits>
 
 template <typename T, typename D>
