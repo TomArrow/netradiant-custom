@@ -8,3 +8,4 @@ x64-Debug
 .idea
 build
 /.cache
+errors.log
