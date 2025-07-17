@@ -5,3 +5,7 @@ install
 .vscode
 .idea
 /.cache
+.vs
+x64-Debug
+build
+errors.log
