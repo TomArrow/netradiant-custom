@@ -427,18 +427,18 @@ static void FinishRawLightmap( rawLightmap_t *lm ){
 	/* deluxemap allocation */
 	if ( deluxemap ) {
 		/* allocate sampling deluxel storage */
-		size = lm->sw * lm->sh * sizeof( *lm->superDeluxels );
-		if ( lm->superDeluxels == NULL ) {
-			lm->superDeluxels = safe_malloc( size );
+		size = lm->sw * lm->sh * sizeof( *lm->superDeluxels[0]);
+		if ( lm->superDeluxels[0] == NULL ) {
+			lm->superDeluxels[0] = safe_malloc( size );
 		}
-		memset( lm->superDeluxels, 0, size );
+		memset( lm->superDeluxels[0], 0, size );
 
 		/* allocate bsp deluxel storage */
-		size = lm->w * lm->h * sizeof( *lm->bspDeluxels );
-		if ( lm->bspDeluxels == NULL ) {
-			lm->bspDeluxels = safe_malloc( size );
-		}
-		memset( lm->bspDeluxels, 0, size );
+		//size = lm->w * lm->h * sizeof( *lm->bspDeluxels[0]);
+		//if ( lm->bspDeluxels[0] == NULL ) {
+		//	lm->bspDeluxels[0] = safe_malloc( size );
+		//}
+		//memset( lm->bspDeluxels[0], 0, size );
 	}
 
 	/* add to count */
@@ -2166,7 +2166,7 @@ static void FindOutLightmaps( rawLightmap_t *lm, bool fastAllocate ){
 				/* store direction */
 				if ( deluxemap ) {
 					/* normalize average light direction */
-					const Vector3 direction = VectorNormalized( lm->getBspDeluxel( x, y ) * 1000.0f );
+					const Vector3 direction = VectorNormalized( lm->getBspDeluxel( lightmapNum,  x, y ) * 1000.0f );
 					olm->bspDirBytes[ oy * olm->customWidth + ox ] = direction * 127.5f + Vector3( 127.5f );
 
 					if (hdr)
@@ -2414,11 +2414,18 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 			if ( lm->superLuxels[ lightmapNum ] == NULL ) {
 				continue;
 			}
+			if (deluxemap && lm->superDeluxels[ lightmapNum ] == NULL ) {
+				continue;
+			}
 
 			/* allocate bsp luxel storage */
 			if ( lm->bspLuxels[ lightmapNum ] == NULL ) {
 				const size_t size = lm->w * lm->h * sizeof( *( lm->bspLuxels[ 0 ] ) );
 				lm->bspLuxels[ lightmapNum ] = safe_calloc( size );
+			}
+			if (deluxemap && lm->bspDeluxels[lightmapNum] == NULL) {
+				const size_t size = lm->w * lm->h * sizeof(*(lm->bspDeluxels[0]));
+				lm->bspDeluxels[lightmapNum] = safe_calloc(size);
 			}
 
 			/* allocate radiosity lightmap storage */
@@ -2453,8 +2460,8 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 							int& cluster = lm->getSuperCluster( sx, sy );
 
 							/* sample deluxemap */
-							if ( deluxemap && lightmapNum == 0 ) {
-								dirSample += lm->getSuperDeluxel( sx, sy );
+							if ( deluxemap /* && lightmapNum == 0*/ ) {
+								dirSample += lm->getSuperDeluxel( lightmapNum, sx, sy );
 							}
 
 							/* keep track of used/occluded samples */
@@ -2517,8 +2524,8 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 					SuperLuxel& luxel = lm->getSuperLuxel( lightmapNum, x, y );
 
 					/* store light direction */
-					if ( deluxemap && lightmapNum == 0 ) {
-						lm->getSuperDeluxel( x, y ) = dirSample;
+					if ( deluxemap/* && lightmapNum == 0*/ ) {
+						lm->getSuperDeluxel( lightmapNum, x, y ) = dirSample;
 					}
 
 					/* store the sample back in super luxels */
@@ -2560,8 +2567,8 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 					const SuperLuxel& luxel = lm->getSuperLuxel( lightmapNum, x, y );
 
 					/* copy light direction */
-					if ( deluxemap && lightmapNum == 0 ) {
-						dirSample = lm->getSuperDeluxel( x, y );
+					if ( deluxemap/* && lightmapNum == 0*/ ) {
+						dirSample = lm->getSuperDeluxel( lightmapNum, x, y );
 					}
 
 					/* is this a valid sample? */
@@ -2642,8 +2649,8 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 					Vector3& bspLuxel = lm->getBspLuxel( lightmapNum, x, y );
 
 					bspLuxel += sample;
-					if ( deluxemap && lightmapNum == 0 ) {
-						lm->getBspDeluxel( x, y ) += dirSample;
+					if ( deluxemap /*&& lightmapNum == 0*/ ) {
+						lm->getBspDeluxel( lightmapNum, x, y ) += dirSample;
 					}
 
 					/* add color to bounds for solid checking */
@@ -2688,9 +2695,9 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 					Vector3& bspLuxel = lm->getBspLuxel( lightmapNum, 0, y );
 					Vector3& bspLuxel2 = lm->getBspLuxel( lightmapNum, lm->w - 1, y );
 					bspLuxel = bspLuxel2 = vector3_mid( bspLuxel, bspLuxel2 );
-					if ( deluxemap && lightmapNum == 0 ) {
-						Vector3& bspDeluxel = lm->getBspDeluxel( 0, y );
-						Vector3& bspDeluxel2 = lm->getBspDeluxel( lm->w - 1, y );
+					if ( deluxemap /*&& lightmapNum == 0*/ ) {
+						Vector3& bspDeluxel = lm->getBspDeluxel( lightmapNum, 0, y );
+						Vector3& bspDeluxel2 = lm->getBspDeluxel( lightmapNum, lm->w - 1, y );
 						bspDeluxel = bspDeluxel2 = vector3_mid( bspDeluxel, bspDeluxel2 );
 					}
 				}
@@ -2702,9 +2709,9 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 					Vector3& bspLuxel2 = lm->getBspLuxel( lightmapNum, x, lm->h - 1 );
 					bspLuxel = vector3_mid( bspLuxel, bspLuxel2 );
 					bspLuxel2 = bspLuxel;
-					if ( deluxemap && lightmapNum == 0 ) {
-						Vector3& bspDeluxel = lm->getBspDeluxel( x, 0 );
-						Vector3& bspDeluxel2 = lm->getBspDeluxel( x, lm->h - 1 );
+					if ( deluxemap/* && lightmapNum == 0*/ ) {
+						Vector3& bspDeluxel = lm->getBspDeluxel( lightmapNum, x, 0 );
+						Vector3& bspDeluxel2 = lm->getBspDeluxel( lightmapNum, x, lm->h - 1 );
 						bspDeluxel = bspDeluxel2 = vector3_mid( bspDeluxel, bspDeluxel2 );
 					}
 				}
@@ -2724,60 +2731,67 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 
 			Sys_Printf( "converting..." );
 
-			for ( i = 0; i < numRawLightmaps; i++ )
-			{
-				/* get lightmap */
-				lm = &rawLightmaps[ i ];
+			for (lightmapNum=0;lightmapNum < MAX_LIGHTMAPS;lightmapNum++){
 
-				/* walk lightmap samples */
-				for ( y = 0; y < lm->sh; y++ )
+				if (!lm->superDeluxels[lightmapNum]) {
+					continue;
+				}
+
+				for ( i = 0; i < numRawLightmaps; i++ )
 				{
-					for ( x = 0; x < lm->sw; x++ )
+					/* get lightmap */
+					lm = &rawLightmaps[ i ];
+
+					/* walk lightmap samples */
+					for ( y = 0; y < lm->sh; y++ )
 					{
-						/* get normal and deluxel */
-						Vector3& bspDeluxel = lm->getBspDeluxel( x, y );
-
-						/* get normal */
-						const Vector3 myNormal = lm->getSuperNormal( x, y );
-
-						/* get tangent vectors */
-						Vector3 myTangent, myBinormal;
-						if ( myNormal[ 0 ] == 0.0f && myNormal[ 1 ] == 0.0f ) {
-							if ( myNormal.z() == 1.0f ) {
-								myTangent = g_vector3_axis_x;
-								myBinormal = g_vector3_axis_y;
-							}
-							else if ( myNormal.z() == -1.0f ) {
-								myTangent = -g_vector3_axis_x;
-								myBinormal = g_vector3_axis_y;
-							}
-						}
-						else
+						for ( x = 0; x < lm->sw; x++ )
 						{
-							myTangent = VectorNormalized( vector3_cross( myNormal, g_vector3_axis_z ) );
-							myBinormal = VectorNormalized( vector3_cross( myTangent, myNormal ) );
+							/* get normal and deluxel */
+							Vector3& bspDeluxel = lm->getBspDeluxel( lightmapNum, x, y );
+
+							/* get normal */
+							const Vector3 myNormal = lm->getSuperNormal( x, y );
+
+							/* get tangent vectors */
+							Vector3 myTangent, myBinormal;
+							if ( myNormal[ 0 ] == 0.0f && myNormal[ 1 ] == 0.0f ) {
+								if ( myNormal.z() == 1.0f ) {
+									myTangent = g_vector3_axis_x;
+									myBinormal = g_vector3_axis_y;
+								}
+								else if ( myNormal.z() == -1.0f ) {
+									myTangent = -g_vector3_axis_x;
+									myBinormal = g_vector3_axis_y;
+								}
+							}
+							else
+							{
+								myTangent = VectorNormalized( vector3_cross( myNormal, g_vector3_axis_z ) );
+								myBinormal = VectorNormalized( vector3_cross( myTangent, myNormal ) );
+							}
+
+							/* project onto plane */
+							myTangent -= myNormal * vector3_dot( myTangent, myNormal );
+							myBinormal -= myNormal * vector3_dot( myBinormal, myNormal );
+
+							/* renormalize */
+							VectorNormalize( myTangent );
+							VectorNormalize( myBinormal );
+
+							/* convert modelspace deluxel to tangentspace */
+							dirSample = VectorNormalized( bspDeluxel );
+
+							/* fix tangents to world matrix */
+							if ( myNormal.x() > 0 || myNormal.y() < 0 || myNormal.z() < 0 ) {
+								vector3_negate( myTangent );
+							}
+
+							/* build tangentspace vectors */
+							bspDeluxel[0] = vector3_dot( dirSample, myTangent );
+							bspDeluxel[1] = vector3_dot( dirSample, myBinormal );
+							bspDeluxel[2] = vector3_dot( dirSample, myNormal );
 						}
-
-						/* project onto plane */
-						myTangent -= myNormal * vector3_dot( myTangent, myNormal );
-						myBinormal -= myNormal * vector3_dot( myBinormal, myNormal );
-
-						/* renormalize */
-						VectorNormalize( myTangent );
-						VectorNormalize( myBinormal );
-
-						/* convert modelspace deluxel to tangentspace */
-						dirSample = VectorNormalized( bspDeluxel );
-
-						/* fix tangents to world matrix */
-						if ( myNormal.x() > 0 || myNormal.y() < 0 || myNormal.z() < 0 ) {
-							vector3_negate( myTangent );
-						}
-
-						/* build tangentspace vectors */
-						bspDeluxel[0] = vector3_dot( dirSample, myTangent );
-						bspDeluxel[1] = vector3_dot( dirSample, myBinormal );
-						bspDeluxel[2] = vector3_dot( dirSample, myNormal );
 					}
 				}
 			}

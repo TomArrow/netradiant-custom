@@ -1216,8 +1216,8 @@ struct rawLightmap_t
 	float                   *superDirt;
 	int                     *superClusters;
 
-	Vector3                 *superDeluxels; /* average light direction */
-	Vector3                 *bspDeluxels;
+	Vector3                 *superDeluxels[MAX_LIGHTMAPS]; /* average light direction */
+	Vector3                 *bspDeluxels[MAX_LIGHTMAPS];
 	SuperFloodLight         *superFloodLight;
 	Vector3& getBspLuxel( int lightmapNum, int x, int y ){
 		return bspLuxels[ lightmapNum ][y * w + x];
@@ -1267,17 +1267,17 @@ struct rawLightmap_t
 	const int& getSuperCluster( int x, int y ) const {
 		return superClusters[y * sw + x];
 	}
-	Vector3& getSuperDeluxel( int x, int y ){
-		return superDeluxels[y * sw + x];
+	Vector3& getSuperDeluxel(int lightmapNum, int x, int y ){
+		return superDeluxels[lightmapNum][y * sw + x];
 	}
-	const Vector3& getSuperDeluxel( int x, int y ) const {
-		return superDeluxels[y * sw + x];
+	const Vector3& getSuperDeluxel(int lightmapNum,  int x, int y ) const {
+		return superDeluxels[lightmapNum][y * sw + x];
 	}
-	Vector3& getBspDeluxel( int x, int y ){
-		return bspDeluxels[y * w + x];
+	Vector3& getBspDeluxel(int lightmapNum, int x, int y ){
+		return bspDeluxels[lightmapNum][y * w + x];
 	}
-	const Vector3& getBspDeluxel( int x, int y ) const {
-		return bspDeluxels[y * w + x];
+	const Vector3& getBspDeluxel(int lightmapNum, int x, int y ) const {
+		return bspDeluxels[lightmapNum][y * w + x];
 	}
 	SuperFloodLight& getSuperFloodLight( int x, int y ){
 		return superFloodLight[y * sw + x];

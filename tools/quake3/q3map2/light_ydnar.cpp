@@ -2423,7 +2423,7 @@ void IlluminateRawLightmap( int rawLightmapNum ){
 		/* allocate temporary per-light luxel storage */
 		rawLightmap_t tmplm = *lm;
 		const size_t llSize = lm->sw * lm->sh * sizeof( *lm->superLuxels[0] );
-		const size_t ldSize = lm->sw * lm->sh * sizeof( *lm->superDeluxels );
+		const size_t ldSize = lm->sw * lm->sh * sizeof( *lm->superDeluxels[0] );
 		if ( llSize <= sizeof( stackLightLuxels ) ) {
 			tmplm.superLuxels[0] = stackLightLuxels;
 		}
@@ -2431,10 +2431,10 @@ void IlluminateRawLightmap( int rawLightmapNum ){
 			tmplm.superLuxels[0] = safe_malloc( llSize );
 		}
 		if ( deluxemap ) {
-			tmplm.superDeluxels = safe_malloc( ldSize );
+			tmplm.superDeluxels[0] = safe_malloc( ldSize );
 		}
 		else{
-			tmplm.superDeluxels = NULL;
+			tmplm.superDeluxels[0] = NULL;
 		}
 
 		/* clear luxels */
@@ -2460,7 +2460,7 @@ void IlluminateRawLightmap( int rawLightmapNum ){
 						// use AT LEAST this amount of contribution from ambient for the deluxemap, fixes points that receive ZERO light
 						const float brightness = std::max( 0.00390625f, RGBTOGRAY( ambientColor ) * ( 1.0f / 255.0f ) );
 
-						lm->getSuperDeluxel( x, y ) = lm->getSuperNormal( x, y ) * brightness;
+						lm->getSuperDeluxel( 0, x, y ) = lm->getSuperNormal( x, y ) * brightness;
 					}
 					luxel.count = 1.0f;
 				}
@@ -2473,6 +2473,10 @@ void IlluminateRawLightmap( int rawLightmapNum ){
 		{
 			if ( lm->superLuxels[ lightmapNum ] != NULL ) {
 				memset( lm->superLuxels[ lightmapNum ], 0, size );
+			}
+			if ( deluxemap && lm->superDeluxels[ lightmapNum ] != NULL ) {
+				size = lm->sw * lm->sh * sizeof(*lm->superDeluxels[0]);
+				memset( lm->superDeluxels[ lightmapNum ], 0, size );
 			}
 		}
 
@@ -2504,7 +2508,7 @@ void IlluminateRawLightmap( int rawLightmapNum ){
 			/* setup */
 			memset( tmplm.superLuxels[0], 0, llSize );
 			if ( deluxemap ) {
-				memset( tmplm.superDeluxels, 0, ldSize );
+				memset( tmplm.superDeluxels[0], 0, ldSize );
 			}
 			totalLighted = 0;
 
@@ -2564,7 +2568,7 @@ void IlluminateRawLightmap( int rawLightmapNum ){
 
 						/* add the contribution to the deluxemap */
 						if ( deluxemap ) {
-							tmplm.getSuperDeluxel( x, y ) = trace.directionContribution;
+							tmplm.getSuperDeluxel( 0, x, y ) = trace.directionContribution;
 						}
 
 						/* check for evilness */
@@ -2647,7 +2651,7 @@ void IlluminateRawLightmap( int rawLightmapNum ){
 									continue;
 								}
 								SuperLuxel& lightLuxel = tmplm.getSuperLuxel( 0, sx, sy );
-								Vector3* lightDeluxel = &tmplm.getSuperDeluxel( sx, sy );
+								Vector3* lightDeluxel = &tmplm.getSuperDeluxel( 0, sx, sy );
 								const Vector3& origin = lm->getSuperOrigin( sx, sy );
 
 								/* only subsample shadowed luxels */
@@ -2695,6 +2699,11 @@ void IlluminateRawLightmap( int rawLightmapNum ){
 				/* allocate sampling lightmap storage */
 				size = lm->sw * lm->sh * sizeof( *lm->superLuxels[0] );
 				lm->superLuxels[ lightmapNum ] = safe_calloc( size );
+			}
+			if ( lm->superDeluxels[ lightmapNum ] == NULL ) {
+				/* allocate sampling lightmap storage */
+				size = lm->sw * lm->sh * sizeof( *lm->superDeluxels[0] );
+				lm->superDeluxels[ lightmapNum ] = safe_calloc( size );
 			}
 
 			/* set style */
@@ -2745,7 +2754,7 @@ void IlluminateRawLightmap( int rawLightmapNum ){
 								/* scale luxel by filter weight */
 								averageColor += tmplm.getSuperLuxel( 0, sx, sy ).value * weight;
 								if ( deluxemap ) {
-									averageDir += tmplm.getSuperDeluxel( sx, sy ) * weight;
+									averageDir += tmplm.getSuperDeluxel( 0, sx, sy ) * weight;
 								}
 								samples += weight;
 							}
@@ -2772,7 +2781,7 @@ void IlluminateRawLightmap( int rawLightmapNum ){
 
 						if ( deluxemap ) {
 							/* scale into luxel */
-							lm->getSuperDeluxel( x, y ) += averageDir / samples;
+							lm->getSuperDeluxel( lightmapNum, x, y ) += averageDir / samples;
 						}
 					}
 
@@ -2801,7 +2810,7 @@ void IlluminateRawLightmap( int rawLightmapNum ){
 						}
 
 						if ( deluxemap ) {
-							lm->getSuperDeluxel( x, y ) += tmplm.getSuperDeluxel( x, y );
+							lm->getSuperDeluxel( lightmapNum, x, y ) += tmplm.getSuperDeluxel(0, x, y );
 						}
 					}
 				}
@@ -2814,7 +2823,7 @@ void IlluminateRawLightmap( int rawLightmapNum ){
 		}
 
 		if ( deluxemap ) {
-			free( tmplm.superDeluxels );
+			free( tmplm.superDeluxels[0] );
 		}
 	}
 
@@ -2956,7 +2965,7 @@ void IlluminateRawLightmap( int rawLightmapNum ){
 						averageColor += luxel2.value;
 						samples += luxel2.count;
 						if ( filterDir ) {
-							averageDir += lm->getSuperDeluxel( sx, sy );
+							averageDir += lm->getSuperDeluxel( lightmapNum, sx, sy );
 						}
 					}
 				}
@@ -2980,7 +2989,7 @@ void IlluminateRawLightmap( int rawLightmapNum ){
 					luxel.count = 1.0f;
 				}
 				if ( filterDir ) {
-					lm->getSuperDeluxel( x, y ) = averageDir * ( 1.f / samples );
+					lm->getSuperDeluxel( lightmapNum, x, y ) = averageDir * ( 1.f / samples );
 				}
 
 				/* set cluster to -3 */
@@ -4157,7 +4166,7 @@ static void FloodlightIlluminateLightmap( rawLightmap_t *lm ){
 					const float brightness = std::max( 0.00390625f, RGBTOGRAY( floodlight.value ) * ( 1.0f / 255.0f ) * floodlight.scale );
 
 					const Vector3 lightvector = lm->getSuperNormal( x, y ) * brightness;
-					lm->getSuperDeluxel( x, y ) += lightvector;
+					lm->getSuperDeluxel( lightmapNum, x, y ) += lightvector;
 				}
 			}
 		}
