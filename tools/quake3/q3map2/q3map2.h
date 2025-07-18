@@ -182,6 +182,7 @@ enum class EBrushType
 #define EXTERNAL_LIGHTMAP       "lm_%04d.tga"
 #define EXTERNAL_HDR_LIGHTMAP	"lm_%04d.hdr"
 #define EXTERNAL_HDR_LIGHTGRID	"lightgrid.raw"
+#define EXTERNAL_HDR_VERTCOLORS	"vertlightDeluxe.raw"
 
 #define MAX_LIGHTMAPS           4           /* RBSP */
 #define MAX_SWITCHED_LIGHTS     32
@@ -320,7 +321,12 @@ enum bspSurfaceType_t
 	MST_FOLIAGE
 };
 
-
+struct bspVertHDR_t
+{
+	Vector3 color[ MAX_LIGHTMAPS ];   /* RBSP - array */
+	byte styles[ MAX_LIGHTMAPS ];         /* RBSP - whole */
+	Vector3 direction[ MAX_LIGHTMAPS ];
+};
 struct bspGridPointHDR_t
 {
 	Vector3 ambient[ MAX_LIGHTMAPS ];    /* RBSP - array */
@@ -1618,7 +1624,7 @@ int                         VisMain( Args& args );
 /* light.c  */
 float                       PointToPolygonFormFactor( const Vector3& point, const Vector3& normal, const winding_t& w );
 int                         LightContributionToSample( trace_t *trace );
-void                        LightingAtSample( trace_t * trace, byte styles[ MAX_LIGHTMAPS ], Vector3 (&colors)[ MAX_LIGHTMAPS ] );
+void                        LightingAtSample( trace_t * trace, byte styles[ MAX_LIGHTMAPS ], Vector3 (&colors)[ MAX_LIGHTMAPS ], Vector3 (&dirs)[ MAX_LIGHTMAPS ]);
 int                         LightMain( Args& args );
 
 
@@ -2076,12 +2082,20 @@ inline int                *sortLightmaps;
 /* vertex luxels */
 inline Vector3            *vertexLuxels[ MAX_LIGHTMAPS ];
 inline Vector3            *radVertexLuxels[ MAX_LIGHTMAPS ];
+inline Vector3            *vertexDeluxels[ MAX_LIGHTMAPS ];
+inline Vector3            *radVertexDeluxels[ MAX_LIGHTMAPS ];
 
 inline Vector3& getVertexLuxel( int lightmapNum, int vertexNum ){
 	return vertexLuxels[lightmapNum][vertexNum];
 }
 inline Vector3& getRadVertexLuxel( int lightmapNum, int vertexNum ){
 	return radVertexLuxels[lightmapNum][vertexNum];
+}
+inline Vector3& getVertexDeluxel( int lightmapNum, int vertexNum ){
+	return vertexDeluxels[lightmapNum][vertexNum];
+}
+inline Vector3& getRadVertexDeluxel( int lightmapNum, int vertexNum ){
+	return radVertexDeluxels[lightmapNum][vertexNum];
 }
 
 /* bsp lightmaps */

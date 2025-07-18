@@ -1169,7 +1169,7 @@ int LightContributionToSample( trace_t *trace ){
    determines the amount of light reaching a sample (luxel or vertex)
  */
 
-void LightingAtSample( trace_t *trace, byte styles[ MAX_LIGHTMAPS ], Vector3 (&colors)[ MAX_LIGHTMAPS ] ){
+void LightingAtSample( trace_t *trace, byte styles[ MAX_LIGHTMAPS ], Vector3 (&colors)[ MAX_LIGHTMAPS ], Vector3 (&dirs)[ MAX_LIGHTMAPS ] ){
 	int i, lightmapNum;
 
 
@@ -1224,6 +1224,9 @@ void LightingAtSample( trace_t *trace, byte styles[ MAX_LIGHTMAPS ], Vector3 (&c
 
 		/* add it */
 		colors[ lightmapNum ] += trace->color;
+
+		/* add it */
+		dirs[ lightmapNum ] += trace->directionContribution;
 
 		/* cheap mode */
 		if ( cheap &&

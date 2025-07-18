@@ -1165,6 +1165,10 @@ void SetupSurfaceLightmaps(){
 	{
 		vertexLuxels[ k ] = safe_calloc( bspDrawVerts.size() * sizeof( *vertexLuxels[ 0 ] ) );
 		radVertexLuxels[ k ] = safe_calloc( bspDrawVerts.size() * sizeof( *radVertexLuxels[ 0 ] ) );
+		if(deluxemap){
+			vertexDeluxels[ k ] = safe_calloc( bspDrawVerts.size() * sizeof( *vertexDeluxels[ 0 ] ) );
+			radVertexDeluxels[ k ] = safe_calloc( bspDrawVerts.size() * sizeof( *radVertexDeluxels[ 0 ] ) );
+		}
 	}
 
 	/* emit some stats */
@@ -3136,6 +3140,10 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 
 		timer.start();
 
+		bspVertHDR_t* hdrVerts = hdr ? safe_calloc( bspDrawVerts.size() * sizeof(bspVertHDR_t) ) : NULL;
+		bspVertHDR_t* hdrVert;
+		Vector4 hdrOutColor;
+
 		/* walk the list of surfaces */
 		for ( size_t i = 0; i < bspDrawSurfaces.size(); ++i )
 		{
@@ -3232,25 +3240,48 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 
 			/* store vertex colors */
 			dv = &bspDrawVerts[ ds->firstVert ];
+			hdrVert = hdrVerts ? &hdrVerts[ ds->firstVert ] : NULL;
 			for ( j = 0; j < ds->numVerts; j++ )
 			{
 				/* walk lightmaps */
 				for ( lightmapNum = 0; lightmapNum < MAX_LIGHTMAPS; lightmapNum++ )
 				{
 					Vector3 color;
+					Vector3 dir;
 					/* handle unused style */
 					if ( ds->vertexStyles[ lightmapNum ] == LS_NONE ) {
 						color.set( 0 );
+						if(deluxemap){
+							dir.set( 0 );
+						}
 					}
 					else
 					{
 						/* get vertex color */
 						color = getVertexLuxel( lightmapNum, ds->firstVert + j );
 
+						if(deluxemap){
+							dir = getVertexDeluxel( lightmapNum, ds->firstVert + j );
+							VectorNormalize(dir);
+						}
+
 						/* set minimum light */
 						if ( lightmapNum == 0 ) {
 							for ( k = 0; k < 3; k++ )
 								value_maximize( color[ k ], minVertexLight[ k ] );
+						}
+					}
+
+					if(hdrVert){
+						hdrVert[j].styles[lightmapNum] = ds->vertexStyles[ lightmapNum ];
+						ColorScaleHDR(color,hdrOutColor.data(),info->si->vertexScale,hdrLightmapInverseSrgb);
+						hdrVert[j].color[lightmapNum][0] = hdrOutColor[0]; 
+						hdrVert[j].color[lightmapNum][1] = hdrOutColor[1]; 
+						hdrVert[j].color[lightmapNum][2] = hdrOutColor[2]; 
+						if(deluxemap){
+							hdrVert[j].direction[lightmapNum][0] = dir[0] * 0.5f + 0.5f;
+							hdrVert[j].direction[lightmapNum][1] = dir[1] * 0.5f + 0.5f;
+							hdrVert[j].direction[lightmapNum][2] = dir[2] * 0.5f + 0.5f;
 						}
 					}
 
@@ -3407,6 +3438,17 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 				const int surf = bspShaders[ ds->shaderNum ].surfaceFlags;
 				ds->shaderNum = EmitShader( info->si->shader, &cont, &surf );
 			}
+		}
+
+		if(hdrVerts){
+			char dirname[1024], filename[1024];
+			strcpy(dirname, source);
+			StripExtension(dirname);
+			sprintf(filename, "%s/" EXTERNAL_HDR_VERTCOLORS, dirname);
+			FILE* file = SafeOpenWrite(filename);
+			const size_t length = sizeof(bspVertHDR_t) * bspDrawVerts.size();
+			SafeWrite(file, hdrVerts, length);
+			fclose(file);
 		}
 
 		Sys_Printf( "%d.", int( timer.elapsed_sec() ) );

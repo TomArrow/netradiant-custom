@@ -3054,6 +3054,7 @@ void IlluminateVertexes( int num ){
 	int lightmapNum, numAvg;
 	float samples, dirt;
 	Vector3 colors[ MAX_LIGHTMAPS ], avgColors[ MAX_LIGHTMAPS ];
+	Vector3 dirs[ MAX_LIGHTMAPS ], avgDirs[ MAX_LIGHTMAPS ];
 	bspDrawSurface_t    *ds;
 	surfaceInfo_t       *info;
 	rawLightmap_t       *lm;
@@ -3092,6 +3093,7 @@ void IlluminateVertexes( int num ){
 		verts = &yDrawVerts[ ds->firstVert ];
 		numAvg = 0;
 		memset( avgColors, 0, sizeof( avgColors ) );
+		memset( avgDirs, 0, sizeof( avgDirs ) );
 
 		/* walk the surface verts */
 		for ( i = 0; i < ds->numVerts; i++ )
@@ -3154,7 +3156,7 @@ void IlluminateVertexes( int num ){
 					}
 
 					/* trace */
-					LightingAtSample( &trace, ds->vertexStyles, colors );
+					LightingAtSample( &trace, ds->vertexStyles, colors, dirs );
 
 					/* store */
 					for ( lightmapNum = 0; lightmapNum < MAX_LIGHTMAPS; lightmapNum++ )
@@ -3167,7 +3169,11 @@ void IlluminateVertexes( int num ){
 
 						/* store */
 						getRadVertexLuxel( lightmapNum, ds->firstVert + i ) = colors[ lightmapNum ];
-						colors[ lightmapNum ] += avgColors[ lightmapNum ];
+						//colors[ lightmapNum ] += avgColors[ lightmapNum ]; // TA: wtf?
+						
+						if(deluxemap){
+							getRadVertexDeluxel( lightmapNum, ds->firstVert + i ) = dirs[ lightmapNum ];
+						}
 					}
 				}
 
@@ -3216,7 +3222,7 @@ void IlluminateVertexes( int num ){
 								}
 
 								/* trace */
-								LightingAtSample( &trace, ds->vertexStyles, colors );
+								LightingAtSample( &trace, ds->vertexStyles, colors, dirs );
 
 								/* store */
 								for ( lightmapNum = 0; lightmapNum < MAX_LIGHTMAPS; lightmapNum++ )
@@ -3229,6 +3235,10 @@ void IlluminateVertexes( int num ){
 
 									/* store */
 									getRadVertexLuxel( lightmapNum, ds->firstVert + i ) = colors[ lightmapNum ];
+
+									if(deluxemap){
+										getRadVertexDeluxel( lightmapNum, ds->firstVert + i ) = dirs[ lightmapNum ];
+									}
 								}
 
 								/* bright enough? */
@@ -3246,6 +3256,9 @@ void IlluminateVertexes( int num ){
 					for ( lightmapNum = 0; lightmapNum < MAX_LIGHTMAPS; lightmapNum++ )
 					{
 						avgColors[ lightmapNum ] += getRadVertexLuxel( lightmapNum, ds->firstVert + i );
+						if(deluxemap){
+							avgDirs[ lightmapNum ] += getRadVertexDeluxel( lightmapNum, ds->firstVert + i );
+						}
 					}
 				}
 			}
@@ -3262,6 +3275,12 @@ void IlluminateVertexes( int num ){
 		else
 		{
 			avgColors[ 0 ] = ambientColor;
+			if(deluxemap){
+				// use AT LEAST this amount of contribution from ambient for the deluxemap, fixes points that receive ZERO light
+				const float brightness = std::max( 0.00390625f, RGBTOGRAY( ambientColor ) * ( 1.0f / 255.0f ) );
+
+				avgDirs[ lightmapNum ] = verts[0].normal * brightness; // this seems bad tbh
+			}
 		}
 
 		/* clean up and store vertex color */
@@ -3272,6 +3291,10 @@ void IlluminateVertexes( int num ){
 				for ( lightmapNum = 0; lightmapNum < MAX_LIGHTMAPS; lightmapNum++ )
 				{
 					getRadVertexLuxel( lightmapNum, ds->firstVert + i ) = avgColors[ lightmapNum ];
+
+					if(deluxemap){
+						getRadVertexDeluxel( lightmapNum, ds->firstVert + i ) = avgDirs[ lightmapNum ];
+					}
 
 					/* debug code */
 					//%	getRadVertexLuxel( lightmapNum, ds->firstVert + i ) = { 255.0f, 0.0f, 0.0f };
@@ -3288,6 +3311,9 @@ void IlluminateVertexes( int num ){
 				/* store */
 				if ( bouncing || bounce == 0 || !bounceOnly ) {
 					vertLuxel += radVertLuxel;
+					if(deluxemap){
+						getVertexDeluxel(lightmapNum, ds->firstVert + i) += getRadVertexDeluxel(lightmapNum, ds->firstVert + i);
+					}
 				}
 				if ( !info->si->noVertexLight ) {
 					verts[ i ].color[ lightmapNum ].rgb() = ColorToBytes( vertLuxel, info->si->vertexScale );
@@ -3385,6 +3411,10 @@ void IlluminateVertexes( int num ){
 							/* add its distinctiveness to our own */
 							radVertLuxel += luxel.value;
 							samples += luxel.count;
+							if(deluxemap){
+								const Vector3& deluxel = lm->getSuperDeluxel( lightmapNum, sx, sy );
+								getRadVertexDeluxel(lightmapNum, ds->firstVert + i) += deluxel;
+							}
 						}
 					}
 				}
@@ -3400,6 +3430,9 @@ void IlluminateVertexes( int num ){
 
 			/* store into floating point storage */
 			vertLuxel += radVertLuxel;
+			if(deluxemap){
+				getVertexDeluxel(lightmapNum, ds->firstVert + i) += getRadVertexDeluxel(lightmapNum, ds->firstVert + i);
+			}
 			numVertsIlluminated++;
 
 			/* store into bytes (for vertex approximation) */
