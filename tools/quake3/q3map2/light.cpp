@@ -1453,9 +1453,10 @@ struct contribution_t
 static void TraceGrid( int num ){
 	int i, j, x, y, z, mod, numCon, numStyles;
 	float d, step;
-	Vector3 cheapColor, thisdir;
+	Vector3 cheapColor; 
+	Vector3 thisdir[ MAX_LIGHTMAPS ];
 	rawGridPoint_t          *gp;
-	rawGridPoint_t          *hdrGp;
+	rawGridPoint_t       	*hdrGp;
 	bspGridPoint_t          *bgp;
 	contribution_t contributions[ MAX_CONTRIBUTIONS ];
 	trace_t trace;
@@ -1516,6 +1517,8 @@ static void TraceGrid( int num ){
 	numCon = 0;
 	cheapColor.set( 0 );
 
+	numStyles = 1;
+
 	/* trace to all the lights, find the major light direction, and divide the
 	   total light between that along the direction and the remaining in the ambient */
 	for ( const light_t& light : lights )
@@ -1543,7 +1546,33 @@ static void TraceGrid( int num ){
 
 		/* push average direction around */
 		addSize = vector3_length( trace.color );
-		gp->dir += trace.direction * addSize;
+		
+		/* find appropriate style */ // TA: Doing it here now because I'm accumulating the dir per style
+		for ( j = 0; j < numStyles; j++ )
+		{
+			if ( gp->styles[ j ] == trace.light->style ) {
+				break;
+			}
+		}
+
+		/* style not found? */
+		if ( j >= numStyles ) {
+			/* add a new style */
+			if ( numStyles < MAX_LIGHTMAPS ) {
+				hdrGp->styles[ numStyles ] = trace.light->style;
+				gp->styles[ numStyles ] = trace.light->style;
+				bgp->styles[ numStyles ] = trace.light->style;
+				numStyles++;
+				//%	Sys_Printf( "(%d, %d) ", num, contributions[ i ].style );
+			}
+
+			/* fallback */
+			else{
+				j = 0;
+			}
+		}
+
+		gp->dir[ j ] += trace.direction * addSize;
 
 		/* stop after a while */
 		if ( numCon >= ( MAX_CONTRIBUTIONS - 1 ) ) {
@@ -1593,7 +1622,7 @@ static void TraceGrid( int num ){
 
 			/* push average direction around */
 			addSize = vector3_length( contributions[ numCon ].color );
-			gp->dir += dir * addSize;
+			gp->dir[ 0 ] += dir * addSize;
 
 			numCon++;
 		}
@@ -1601,19 +1630,15 @@ static void TraceGrid( int num ){
 	/////////////////////
 
 	/* normalize to get primary light direction */
-	thisdir = VectorNormalized( gp->dir );
+	for( j=0; j < MAX_LIGHTMAPS; j++){
+		thisdir[ j ] = VectorNormalized( gp->dir[ j ] );
+	}
 
 	/* now that we have identified the primary light direction,
 	   go back and separate all the light into directed and ambient */
 
-	numStyles = 1;
 	for ( i = 0; i < numCon; i++ )
 	{
-		/* get relative directed strength */
-		d = vector3_dot( contributions[ i ].dir, thisdir );
-		/* we map 1 to gridDirectionality, and 0 to gridAmbientDirectionality */
-		d = std::max( 0.f, gridAmbientDirectionality + d * ( gridDirectionality - gridAmbientDirectionality ) );
-
 		/* find appropriate style */
 		for ( j = 0; j < numStyles; j++ )
 		{
@@ -1638,6 +1663,11 @@ static void TraceGrid( int num ){
 				j = 0;
 			}
 		}
+
+		/* get relative directed strength */
+		d = vector3_dot( contributions[ i ].dir, thisdir[ j ] );
+		/* we map 1 to gridDirectionality, and 0 to gridAmbientDirectionality */
+		d = std::max( 0.f, gridAmbientDirectionality + d * ( gridDirectionality - gridAmbientDirectionality ) );
 
 		/* add the directed color */
 		gp->directed[ j ] += contributions[ i ].color * d;
@@ -1689,6 +1719,7 @@ static void TraceGrid( int num ){
 		if (hdr) {
 			hdrGp->ambient[i] = ColorScaleHDR(gp->ambient[i], gridScale * gridAmbientScale,false);
 			hdrGp->directed[i] = ColorScaleHDR(gp->directed[i], gridScale,false);
+			hdrGp->dir[i] = gp->dir[i];
 		}
 
 		/*
@@ -1712,8 +1743,7 @@ static void TraceGrid( int num ){
 	#endif
 
 	/* store direction */
-	NormalToLatLong( thisdir, bgp->latLong );
-	hdrGp->dir = thisdir;
+	NormalToLatLong( VectorNormalized( thisdir[ 0 ] + thisdir[ 1 ] + thisdir[ 2 ] + thisdir[ 3 ] ), bgp->latLong );
 }
 
 
@@ -1779,12 +1809,12 @@ static void SetupGrid(){
 		rawGridPoints = decltype( rawGridPoints )( numGridPoints, rawGridPoint_t{
 			{ ambientColor, ambientColor, ambientColor, ambientColor },
 			{ g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity },
-			g_vector3_identity,
+			{ g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity },
 			{ LS_NORMAL, LS_NONE, LS_NONE, LS_NONE } } );
 		rawScaledGridPoints = decltype(rawScaledGridPoints)( numGridPoints, rawGridPoint_t{ // for HDR lightgrid
 			{ Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f) },
 			{ Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f) },
-			Vector3(0.0f),
+			{ Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f) },
 			{ LS_NORMAL, LS_NONE, LS_NONE, LS_NONE } } );
 		bspGridPoints = decltype( bspGridPoints )( numGridPoints, bspGridPoint_t{
 			{ Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ) },

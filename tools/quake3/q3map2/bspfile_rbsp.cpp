@@ -95,13 +95,15 @@ static void CopyLightGridLumps( rbspHeader_t *header ){
 		bspGridPoints.push_back( gridPoints[ id ] );
 }
 
-#define HDR_VERSION 2
+#define HDR_VERSION 3
 
 static void AddLightGridLumps( FILE *file, rbspHeader_t& header ){
 	/* allocate temporary buffers */
 	const size_t maxGridPoints = std::min( bspGridPoints.size(), size_t( MAX_MAP_GRID ) );
 	std::vector<bspGridPoint_t> gridPoints;
-#if HDR_VERSION==2
+#if HDR_VERSION==3
+	std::vector<bspGridPointHDRV3_t> hdrGridPointsV3; // even more improved. has directions per style
+#elif HDR_VERSION==2
 	std::vector<bspGridPointHDR_t> hdrGridPointsV2; // new improved version that resembles the normal bsp layout including style support, just with floats
 #else
 	std::vector<hdrGridPoint_t> hdrGridPoints;
@@ -172,7 +174,17 @@ static void AddLightGridLumps( FILE *file, rbspHeader_t& header ){
 		// HDR lightgrid is not indexed.
 		if (hdr) {
 
-#if HDR_VERSION==2
+#if HDR_VERSION==3
+			bspGridPointHDRV3_t hdrGridPointV3;
+			for (int k = 0; k < MAX_LIGHTMAPS; k++)
+			{
+				hdrGridPointV3.ambient[k] = inRaw.ambient[k];
+				hdrGridPointV3.directed[k] = inRaw.directed[k];
+				hdrGridPointV3.styles[k] = inRaw.styles[k];
+				hdrGridPointV3.direction[k] = inRaw.dir[k];
+			}
+			hdrGridPointsV3.push_back(hdrGridPointV3);
+#elif HDR_VERSION==2
 			bspGridPointHDR_t hdrGridPointV2;
 			for (int k = 0; k < MAX_LIGHTMAPS; k++)
 			{
@@ -180,7 +192,7 @@ static void AddLightGridLumps( FILE *file, rbspHeader_t& header ){
 				hdrGridPointV2.directed[k] = inRaw.directed[k];
 				hdrGridPointV2.styles[k] = inRaw.styles[k];
 			}
-			hdrGridPointV2.direction = inRaw.dir;
+			hdrGridPointV2.direction = inRaw.dir[ 0 ] + inRaw.dir[ 1 ] + inRaw.dir[ 2 ] + inRaw.dir[ 3 ];
 			hdrGridPointsV2.push_back(hdrGridPointV2);
 #else
 			hdrGridPoint_t hdrGridPoint;
@@ -205,7 +217,16 @@ static void AddLightGridLumps( FILE *file, rbspHeader_t& header ){
 	AddLump( file, header.lumps[LUMP_LIGHTARRAY], gridArray );
 
 	if (hdr) {
-#if HDR_VERSION==2
+#if HDR_VERSION==3
+		char dirname[1024], filename[1024];
+		strcpy(dirname, source);
+		StripExtension(dirname);
+		sprintf(filename, "%s/" EXTERNAL_HDR_LIGHTGRID, dirname);
+		FILE* file = SafeOpenWrite(filename);
+		const size_t length = sizeof(bspGridPointHDRV3_t) * hdrGridPointsV3.size();
+		SafeWrite(file, hdrGridPointsV3.data(), length);
+		fclose(file);
+#elif HDR_VERSION==2
 		char dirname[1024], filename[1024];
 		strcpy(dirname, source);
 		StripExtension(dirname);
