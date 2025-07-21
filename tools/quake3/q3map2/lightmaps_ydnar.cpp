@@ -3262,7 +3262,7 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 
 						if(deluxemap){
 							dir = getVertexDeluxel( lightmapNum, ds->firstVert + j );
-							VectorNormalize(dir);
+							//VectorNormalize(dir);
 						}
 
 						/* set minimum light */
@@ -3279,9 +3279,12 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 						hdrVert[j].color[lightmapNum][1] = hdrOutColor[1]; 
 						hdrVert[j].color[lightmapNum][2] = hdrOutColor[2]; 
 						if(deluxemap){
-							hdrVert[j].direction[lightmapNum][0] = dir[0] * 0.5f + 0.5f;
-							hdrVert[j].direction[lightmapNum][1] = dir[1] * 0.5f + 0.5f;
-							hdrVert[j].direction[lightmapNum][2] = dir[2] * 0.5f + 0.5f;
+							//hdrVert[j].direction[lightmapNum][0] = dir[0] * 0.5f + 0.5f;
+							//hdrVert[j].direction[lightmapNum][1] = dir[1] * 0.5f + 0.5f;
+							//hdrVert[j].direction[lightmapNum][2] = dir[2] * 0.5f + 0.5f;
+							hdrVert[j].direction[lightmapNum][0] = dir[0];
+							hdrVert[j].direction[lightmapNum][1] = dir[1];
+							hdrVert[j].direction[lightmapNum][2] = dir[2];
 						}
 					}
 
