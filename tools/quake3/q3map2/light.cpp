@@ -1174,8 +1174,10 @@ void LightingAtSample( trace_t *trace, byte styles[ MAX_LIGHTMAPS ], Vector3 (&c
 
 
 	/* clear colors */
-	for ( lightmapNum = 0; lightmapNum < MAX_LIGHTMAPS; lightmapNum++ )
+	for ( lightmapNum = 0; lightmapNum < MAX_LIGHTMAPS; lightmapNum++ ){
 		colors[ lightmapNum ].set( 0 );
+		dirs[ lightmapNum ].set( 0 );
+	}
 
 	/* ydnar: normalmap */
 	if ( normalmap ) {
