@@ -2414,13 +2414,15 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 		/* walk individual lightmaps */
 		for ( lightmapNum = 0; lightmapNum < MAX_LIGHTMAPS; lightmapNum++ )
 		{
+			bool haveSuperDeluxel = lm->superDeluxels[ lightmapNum ] != NULL;
+
 			/* early outs */
 			if ( lm->superLuxels[ lightmapNum ] == NULL ) {
 				continue;
 			}
-			if (deluxemap && lm->superDeluxels[ lightmapNum ] == NULL ) {
-				continue;
-			}
+			//if (deluxemap && !haveSuperDeluxel) {
+			//	continue;
+			//}
 
 			/* allocate bsp luxel storage */
 			if ( lm->bspLuxels[ lightmapNum ] == NULL ) {
@@ -2464,7 +2466,7 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 							int& cluster = lm->getSuperCluster( sx, sy );
 
 							/* sample deluxemap */
-							if ( deluxemap /* && lightmapNum == 0*/ ) {
+							if ( deluxemap && haveSuperDeluxel /* && lightmapNum == 0*/ ) {
 								dirSample += lm->getSuperDeluxel( lightmapNum, sx, sy );
 							}
 
@@ -2528,7 +2530,7 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 					SuperLuxel& luxel = lm->getSuperLuxel( lightmapNum, x, y );
 
 					/* store light direction */
-					if ( deluxemap/* && lightmapNum == 0*/ ) {
+					if ( deluxemap/* && lightmapNum == 0*/ && haveSuperDeluxel) {
 						lm->getSuperDeluxel( lightmapNum, x, y ) = dirSample;
 					}
 
@@ -2571,7 +2573,7 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 					const SuperLuxel& luxel = lm->getSuperLuxel( lightmapNum, x, y );
 
 					/* copy light direction */
-					if ( deluxemap/* && lightmapNum == 0*/ ) {
+					if ( deluxemap && haveSuperDeluxel/* && lightmapNum == 0*/ ) {
 						dirSample = lm->getSuperDeluxel( lightmapNum, x, y );
 					}
 
@@ -2962,9 +2964,11 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 			{
 				free( outLightmaps[ i ].lightBits );
 				free( outLightmaps[ i ].bspLightBytes );
-				free( outLightmaps[i].bspLightFloats );
-				if (deluxemap) {
-					free(outLightmaps[i].bspDeLightFloats);
+				if(hdr){
+					free( outLightmaps[i].bspLightFloats );
+					if (deluxemap) {
+						free(outLightmaps[i].bspDeLightFloats);
+					}
 				}
 			}
 			free( outLightmaps );
