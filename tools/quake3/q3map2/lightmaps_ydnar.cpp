@@ -2420,9 +2420,9 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 			if ( lm->superLuxels[ lightmapNum ] == NULL ) {
 				continue;
 			}
-			//if (deluxemap && !haveSuperDeluxel) {
-			//	continue;
-			//}
+			if (deluxemap && !haveSuperDeluxel) {
+				continue;
+			}
 
 			/* allocate bsp luxel storage */
 			if ( lm->bspLuxels[ lightmapNum ] == NULL ) {
@@ -2466,7 +2466,7 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 							int& cluster = lm->getSuperCluster( sx, sy );
 
 							/* sample deluxemap */
-							if ( deluxemap && haveSuperDeluxel /* && lightmapNum == 0*/ ) {
+							if ( deluxemap  /*&& haveSuperDeluxel && lightmapNum == 0*/ ) {
 								dirSample += lm->getSuperDeluxel( lightmapNum, sx, sy );
 							}
 
@@ -2530,7 +2530,7 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 					SuperLuxel& luxel = lm->getSuperLuxel( lightmapNum, x, y );
 
 					/* store light direction */
-					if ( deluxemap/* && lightmapNum == 0*/ && haveSuperDeluxel) {
+					if ( deluxemap/* && lightmapNum == 0 && haveSuperDeluxel*/) {
 						lm->getSuperDeluxel( lightmapNum, x, y ) = dirSample;
 					}
 
@@ -2573,7 +2573,7 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 					const SuperLuxel& luxel = lm->getSuperLuxel( lightmapNum, x, y );
 
 					/* copy light direction */
-					if ( deluxemap && haveSuperDeluxel/* && lightmapNum == 0*/ ) {
+					if ( deluxemap/* && haveSuperDeluxel && lightmapNum == 0*/ ) {
 						dirSample = lm->getSuperDeluxel( lightmapNum, x, y );
 					}
 
