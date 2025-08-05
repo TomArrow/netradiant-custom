@@ -183,6 +183,7 @@ enum class EBrushType
 #define EXTERNAL_HDR_LIGHTMAP	"lm_%04d.hdr"
 #define EXTERNAL_HDR_LIGHTGRID	"lightgrid.raw"
 #define EXTERNAL_HDR_VERTCOLORS	"vertlightDeluxe.raw"
+#define EXTERNAL_MULTISTYLE_SURFACES	"manyStyleSurfaces.raw"
 
 #define MAX_LIGHTMAPS           14           /* MODDED FOR MORE STYLES, CUSTOM EXPORT FORMAT */
 #define MAX_LIGHTMAPS_RBSP      4           /* RBSP */
@@ -353,6 +354,12 @@ struct bspVertHDR_t
 	byte styles[ MAX_LIGHTMAPS_RBSP ];
 	Vector3 direction[ MAX_LIGHTMAPS_RBSP ];
 };
+struct bspVertHDRV2_t
+{
+	Vector3 color[ MAX_LIGHTMAPS ];
+	byte styles[ MAX_LIGHTMAPS ];
+	Vector3 direction[ MAX_LIGHTMAPS ];
+};
 struct bspGridPointHDR_t
 {
 	Vector3 ambient[ MAX_LIGHTMAPS_RBSP ];
@@ -366,6 +373,13 @@ struct bspGridPointHDRV3_t
 	Vector3 directed[ MAX_LIGHTMAPS_RBSP ];
 	byte styles[ MAX_LIGHTMAPS_RBSP ]; 
 	Vector3 direction[ MAX_LIGHTMAPS_RBSP ];
+};
+struct bspGridPointHDRV4_t
+{
+	Vector3 ambient[ MAX_LIGHTMAPS ];
+	Vector3 directed[ MAX_LIGHTMAPS ];
+	byte styles[ MAX_LIGHTMAPS ]; 
+	Vector3 direction[ MAX_LIGHTMAPS ];
 };
 struct bspGridPoint_t
 {

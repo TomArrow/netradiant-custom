@@ -2354,6 +2354,8 @@ static void FillOutLightmap( outLightmap_t *olm ){
 	}
 }
 
+#define HDR_VERTVERSION 2
+
 /*
    StoreSurfaceLightmaps()
    stores the surface lightmaps into the bsp as byte rgb triplets
@@ -3144,8 +3146,13 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 
 		timer.start();
 
+#if HDR_VERTVERSION == 2
+		bspVertHDRV2_t* hdrVerts = hdr ? safe_calloc( bspDrawVerts.size() * sizeof(bspVertHDRV2_t) ) : NULL;
+		bspVertHDRV2_t* hdrVert;
+#else
 		bspVertHDR_t* hdrVerts = hdr ? safe_calloc( bspDrawVerts.size() * sizeof(bspVertHDR_t) ) : NULL;
 		bspVertHDR_t* hdrVert;
+#endif
 		Vector4 hdrOutColor;
 
 		/* walk the list of surfaces */
@@ -3276,7 +3283,11 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 						}
 					}
 
-					if(hdrVert && lightmapNum < MAX_LIGHTMAPS_RBSP){
+					if(hdrVert
+#if HDR_VERTVERSION != 2
+						 && lightmapNum < MAX_LIGHTMAPS_RBSP
+#endif
+						){
 						hdrVert[j].styles[lightmapNum] = ds->vertexStyles[ lightmapNum ];
 						ColorScaleHDR(color,hdrOutColor.data(),info->si->vertexScale,hdrLightmapInverseSrgb);
 						hdrVert[j].color[lightmapNum][0] = hdrOutColor[0]; 
@@ -3448,6 +3459,18 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 		}
 
 		if(hdrVerts){
+#if HDR_VERTVERSION == 2
+			char dirname[1024], filename[1024];
+			strcpy(dirname, source);
+			StripExtension(dirname);
+			sprintf(filename, "%s/" EXTERNAL_HDR_VERTCOLORS, dirname);
+			FILE* file = SafeOpenWrite(filename);
+			const size_t length = sizeof(bspVertHDRV2_t) * bspDrawVerts.size();
+			SafeWrite(file, hdrVerts, length);
+			free(hdrVerts);
+			hdrVerts = NULL;
+			fclose(file);
+#else
 			char dirname[1024], filename[1024];
 			strcpy(dirname, source);
 			StripExtension(dirname);
@@ -3455,7 +3478,10 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 			FILE* file = SafeOpenWrite(filename);
 			const size_t length = sizeof(bspVertHDR_t) * bspDrawVerts.size();
 			SafeWrite(file, hdrVerts, length);
+			free(hdrVerts);
+			hdrVerts = NULL;
 			fclose(file);
+#endif
 		}
 
 		Sys_Printf( "%d.", int( timer.elapsed_sec() ) );

@@ -95,13 +95,15 @@ static void CopyLightGridLumps( rbspHeader_t *header ){
 		bspGridPoints.push_back( gridPoints[ id ] );
 }
 
-#define HDR_VERSION 3
+#define HDR_VERSION 4
 
 static void AddLightGridLumps( FILE *file, rbspHeader_t& header ){
 	/* allocate temporary buffers */
 	const size_t maxGridPoints = std::min( bspGridPoints.size(), size_t( MAX_MAP_GRID ) );
 	std::vector<bspGridPoint_t> gridPoints;
-#if HDR_VERSION==3
+#if HDR_VERSION==4
+	std::vector<bspGridPointHDRV4_t> hdrGridPointsV4; // even more improved. has directions per style
+#elif HDR_VERSION==3
 	std::vector<bspGridPointHDRV3_t> hdrGridPointsV3; // even more improved. has directions per style
 #elif HDR_VERSION==2
 	std::vector<bspGridPointHDR_t> hdrGridPointsV2; // new improved version that resembles the normal bsp layout including style support, just with floats
@@ -174,7 +176,17 @@ static void AddLightGridLumps( FILE *file, rbspHeader_t& header ){
 		// HDR lightgrid is not indexed.
 		if (hdr) {
 
-#if HDR_VERSION==3
+#if HDR_VERSION==4
+			bspGridPointHDRV4_t hdrGridPointV4;
+			for (int k = 0; k < MAX_LIGHTMAPS; k++)
+			{
+				hdrGridPointV4.ambient[k] = inRaw.ambient[k];
+				hdrGridPointV4.directed[k] = inRaw.directed[k];
+				hdrGridPointV4.styles[k] = inRaw.styles[k];
+				hdrGridPointV4.direction[k] = inRaw.dir[k];
+			}
+			hdrGridPointsV4.push_back(hdrGridPointV4);
+#elif HDR_VERSION==3
 			bspGridPointHDRV3_t hdrGridPointV3;
 			for (int k = 0; k < MAX_LIGHTMAPS_RBSP; k++)
 			{
@@ -217,7 +229,16 @@ static void AddLightGridLumps( FILE *file, rbspHeader_t& header ){
 	AddLump( file, header.lumps[LUMP_LIGHTARRAY], gridArray );
 
 	if (hdr) {
-#if HDR_VERSION==3
+#if HDR_VERSION==4
+		char dirname[1024], filename[1024];
+		strcpy(dirname, source);
+		StripExtension(dirname);
+		sprintf(filename, "%s/" EXTERNAL_HDR_LIGHTGRID, dirname);
+		FILE* file = SafeOpenWrite(filename);
+		const size_t length = sizeof(bspGridPointHDRV4_t) * hdrGridPointsV4.size();
+		SafeWrite(file, hdrGridPointsV4.data(), length);
+		fclose(file);
+#elif  HDR_VERSION==3
 		char dirname[1024], filename[1024];
 		strcpy(dirname, source);
 		StripExtension(dirname);
@@ -338,6 +359,19 @@ void WriteRBSPFile( const char *filename ){
 	AddLump( file, header.lumps[LUMP_ENTITIES], bspEntData );
 	AddLump( file, header.lumps[LUMP_FOGS], bspFogs );
 	AddLump( file, header.lumps[LUMP_DRAWINDEXES], bspDrawIndexes );
+
+	if(hdr){
+		// not rly aanything HDR but lets just put it behind that switch too
+		// exports the surfaces with the extra styles (14 instead of 4)
+		char dirname[1024], filename[1024];
+		strcpy(dirname, source);
+		StripExtension(dirname);
+		sprintf(filename, "%s/" EXTERNAL_MULTISTYLE_SURFACES, dirname);
+		FILE* file = SafeOpenWrite(filename);
+		const size_t length = sizeof(bspDrawSurface_t) * bspDrawSurfaces.size();
+		SafeWrite(file, bspDrawSurfaces.data(), length);
+		fclose(file);
+	}
 
 	/* emit bsp size */
 	const int size = ftell( file );
