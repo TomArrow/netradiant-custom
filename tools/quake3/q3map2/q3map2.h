@@ -184,7 +184,8 @@ enum class EBrushType
 #define EXTERNAL_HDR_LIGHTGRID	"lightgrid.raw"
 #define EXTERNAL_HDR_VERTCOLORS	"vertlightDeluxe.raw"
 
-#define MAX_LIGHTMAPS           4           /* RBSP */
+#define MAX_LIGHTMAPS           14           /* MODDED FOR MORE STYLES, CUSTOM EXPORT FORMAT */
+#define MAX_LIGHTMAPS_RBSP      4           /* RBSP */
 #define MAX_SWITCHED_LIGHTS     32
 #define LS_NORMAL               0x00
 #define LS_UNUSED               0xFE
@@ -307,6 +308,31 @@ struct bspDrawVert_t
 	Color4b color[ MAX_LIGHTMAPS ];             /* RBSP */
 };
 
+struct rbspDrawVert_t
+{
+	Vector3 xyz;
+	Vector2 st;
+	Vector2 lightmap[ MAX_LIGHTMAPS_RBSP ];          /* RBSP */
+	Vector3 normal;
+	Color4b color[ MAX_LIGHTMAPS_RBSP ];             /* RBSP */
+	rbspDrawVert_t( const bspDrawVert_t& other ) :
+		xyz     ( other.xyz ),
+		st      ( other.st ),
+		lightmap{ other.lightmap[0], other.lightmap[1], other.lightmap[2], other.lightmap[3] },
+		normal  ( other.normal ),
+		color   { other.color[0], other.color[1], other.color[2], other.color[3]  } {}
+	operator bspDrawVert_t() const {
+		static_assert( MAX_LIGHTMAPS == 14 );
+		return {
+			xyz,
+			st,
+			{ lightmap[0], lightmap[1], lightmap[2], lightmap[3], Vector2( 0, 0 ), Vector2( 0, 0 ), Vector2( 0, 0 ), Vector2( 0, 0 ), Vector2( 0, 0 ), Vector2( 0, 0 ), Vector2( 0, 0 ), Vector2( 0, 0 ), Vector2( 0, 0 ), Vector2( 0, 0 ) },
+			normal,
+			{ color[0], color[1], color[2], color[3], Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ) }
+		};
+	}
+};
+
 using TriRef = std::array<const bspDrawVert_t *, 3>;
 using QuadRef = std::array<const bspDrawVert_t *, 4>;
 
@@ -323,23 +349,23 @@ enum bspSurfaceType_t
 
 struct bspVertHDR_t
 {
-	Vector3 color[ MAX_LIGHTMAPS ];
-	byte styles[ MAX_LIGHTMAPS ];
-	Vector3 direction[ MAX_LIGHTMAPS ];
+	Vector3 color[ MAX_LIGHTMAPS_RBSP ];
+	byte styles[ MAX_LIGHTMAPS_RBSP ];
+	Vector3 direction[ MAX_LIGHTMAPS_RBSP ];
 };
 struct bspGridPointHDR_t
 {
-	Vector3 ambient[ MAX_LIGHTMAPS ];
-	Vector3 directed[ MAX_LIGHTMAPS ];
-	byte styles[ MAX_LIGHTMAPS ];
+	Vector3 ambient[ MAX_LIGHTMAPS_RBSP ];
+	Vector3 directed[ MAX_LIGHTMAPS_RBSP ];
+	byte styles[ MAX_LIGHTMAPS_RBSP ];
 	Vector3 direction;
 };
 struct bspGridPointHDRV3_t
 {
-	Vector3 ambient[ MAX_LIGHTMAPS ];
-	Vector3 directed[ MAX_LIGHTMAPS ];
-	byte styles[ MAX_LIGHTMAPS ]; 
-	Vector3 direction[ MAX_LIGHTMAPS ];
+	Vector3 ambient[ MAX_LIGHTMAPS_RBSP ];
+	Vector3 directed[ MAX_LIGHTMAPS_RBSP ];
+	byte styles[ MAX_LIGHTMAPS_RBSP ]; 
+	Vector3 direction[ MAX_LIGHTMAPS_RBSP ];
 };
 struct bspGridPoint_t
 {
@@ -349,6 +375,28 @@ struct bspGridPoint_t
 	byte latLong[ 2 ];
 };
 
+struct rbspGridPoint_t
+{
+	Vector3b ambient[ MAX_LIGHTMAPS_RBSP ];    /* RBSP - array */
+	Vector3b directed[ MAX_LIGHTMAPS_RBSP ];   /* RBSP - array */
+	byte styles[ MAX_LIGHTMAPS_RBSP ];         /* RBSP - whole */
+	byte latLong[ 2 ];
+	rbspGridPoint_t( const bspGridPoint_t& other ) :
+		ambient { other.ambient[0], other.ambient[1], other.ambient[2], other.ambient[3] },
+		directed{ other.directed[0], other.directed[1], other.directed[2], other.directed[3] },
+		styles  { other.styles[0], other.styles[1], other.styles[2], other.styles[3] },
+		latLong { other.latLong[0], other.latLong[1] } {}
+		
+	operator bspGridPoint_t() const {
+		static_assert( MAX_LIGHTMAPS == 14 );
+		return {
+			{ ambient[0], ambient[1], ambient[2], ambient[3], Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0) },
+			{ directed[0], directed[1], directed[2], directed[3], Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0) },
+			{ styles[0], styles[1], styles[2], styles[3], LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE },
+			{ latLong[0], latLong[1] }
+		};
+	}
+};
 
 struct bspDrawSurface_t
 {
@@ -373,6 +421,73 @@ struct bspDrawSurface_t
 
 	int patchWidth;
 	int patchHeight;
+};
+
+struct rbspDrawSurface_t
+{
+	int shaderNum;
+	int fogNum;
+	int surfaceType;
+
+	int firstVert;
+	int numVerts;
+
+	int firstIndex;
+	int numIndexes;
+
+	byte lightmapStyles[ MAX_LIGHTMAPS_RBSP ];                               /* RBSP */
+	byte vertexStyles[ MAX_LIGHTMAPS_RBSP ];                                 /* RBSP */
+	int lightmapNum[ MAX_LIGHTMAPS_RBSP ];                                   /* RBSP */
+	int lightmapX[ MAX_LIGHTMAPS_RBSP ], lightmapY[ MAX_LIGHTMAPS_RBSP ];         /* RBSP */
+	int lightmapWidth, lightmapHeight;
+
+	Vector3 lightmapOrigin;
+	Vector3 lightmapVecs[ 3 ];       /* on patches, [ 0 ] and [ 1 ] are lodbounds */
+
+	int patchWidth;
+	int patchHeight;
+	rbspDrawSurface_t( const bspDrawSurface_t& other ) :
+		shaderNum     ( other.shaderNum ),
+		fogNum        ( other.fogNum ),
+		surfaceType   ( other.surfaceType ),
+		firstVert     ( other.firstVert ),
+		numVerts      ( other.numVerts ),
+		firstIndex    ( other.firstIndex ),
+		numIndexes    ( other.numIndexes ),
+		lightmapStyles { other.lightmapStyles[0], other.lightmapStyles[1], other.lightmapStyles[2], other.lightmapStyles[3] },
+		vertexStyles  { other.vertexStyles[0], other.vertexStyles[1], other.vertexStyles[2], other.vertexStyles[3] },
+		lightmapNum   { other.lightmapNum[0], other.lightmapNum[1], other.lightmapNum[2], other.lightmapNum[3] },
+		lightmapX     { other.lightmapX[0], other.lightmapX[1], other.lightmapX[2], other.lightmapX[3] },
+		lightmapY     { other.lightmapY[0], other.lightmapY[1], other.lightmapY[2], other.lightmapY[3] },
+		lightmapWidth ( other.lightmapWidth ),
+		lightmapHeight( other.lightmapHeight ),
+		lightmapOrigin( other.lightmapOrigin ),
+		lightmapVecs  { other.lightmapVecs[0], other.lightmapVecs[1], other.lightmapVecs[2] },
+		patchWidth    ( other.patchWidth ),
+		patchHeight   ( other.patchHeight ) {}
+	operator bspDrawSurface_t() const {
+		static_assert( MAX_LIGHTMAPS == 14 );
+		return{
+			shaderNum,
+			fogNum,
+			surfaceType,
+			firstVert,
+			numVerts,
+			firstIndex,
+			numIndexes,
+			{ lightmapStyles[0], lightmapStyles[1], lightmapStyles[2], lightmapStyles[3], LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE },
+			{ vertexStyles[0], vertexStyles[1], vertexStyles[2], vertexStyles[3], LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE },
+			{ lightmapNum[0], lightmapNum[1], lightmapNum[2], lightmapNum[3], -3, -3, -3, -3, -3, -3, -3, -3, -3, -3 },
+			{ lightmapX[0], lightmapX[1], lightmapX[2], lightmapX[3], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+			{ lightmapY[0], lightmapY[1], lightmapY[2], lightmapY[3], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+			lightmapWidth,
+			lightmapHeight,
+			lightmapOrigin,
+			{ lightmapVecs[0], lightmapVecs[1], lightmapVecs[2] },
+			patchWidth,
+			patchHeight
+		};
+	}
 };
 
 

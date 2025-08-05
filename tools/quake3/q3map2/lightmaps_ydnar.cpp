@@ -3276,7 +3276,7 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 						}
 					}
 
-					if(hdrVert){
+					if(hdrVert && lightmapNum < MAX_LIGHTMAPS_RBSP){
 						hdrVert[j].styles[lightmapNum] = ds->vertexStyles[ lightmapNum ];
 						ColorScaleHDR(color,hdrOutColor.data(),info->si->vertexScale,hdrLightmapInverseSrgb);
 						hdrVert[j].color[lightmapNum][0] = hdrOutColor[0]; 

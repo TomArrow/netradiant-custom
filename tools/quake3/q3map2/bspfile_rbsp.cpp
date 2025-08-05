@@ -85,7 +85,7 @@ struct rbspHeader_t
 static void CopyLightGridLumps( rbspHeader_t *header ){
 	std::vector<bspGridPoint_t> gridPoints;
 	std::vector<unsigned short> gridArray;
-	CopyLump( (bspHeader_t*) header, LUMP_LIGHTGRID, gridPoints );
+	CopyLump<bspGridPoint_t, rbspGridPoint_t>( (bspHeader_t*) header, LUMP_LIGHTGRID, gridPoints );
 	CopyLump( (bspHeader_t*) header, LUMP_LIGHTARRAY, gridArray );
 
 	bspGridPoints.clear();
@@ -176,7 +176,7 @@ static void AddLightGridLumps( FILE *file, rbspHeader_t& header ){
 
 #if HDR_VERSION==3
 			bspGridPointHDRV3_t hdrGridPointV3;
-			for (int k = 0; k < MAX_LIGHTMAPS; k++)
+			for (int k = 0; k < MAX_LIGHTMAPS_RBSP; k++)
 			{
 				hdrGridPointV3.ambient[k] = inRaw.ambient[k];
 				hdrGridPointV3.directed[k] = inRaw.directed[k];
@@ -186,7 +186,7 @@ static void AddLightGridLumps( FILE *file, rbspHeader_t& header ){
 			hdrGridPointsV3.push_back(hdrGridPointV3);
 #elif HDR_VERSION==2
 			bspGridPointHDR_t hdrGridPointV2;
-			for (int k = 0; k < MAX_LIGHTMAPS; k++)
+			for (int k = 0; k < MAX_LIGHTMAPS_RBSP; k++)
 			{
 				hdrGridPointV2.ambient[k] = inRaw.ambient[k];
 				hdrGridPointV2.directed[k] = inRaw.directed[k];
@@ -198,7 +198,7 @@ static void AddLightGridLumps( FILE *file, rbspHeader_t& header ){
 			hdrGridPoint_t hdrGridPoint;
 			hdrGridPoint.ambient.set(0.0f);
 			hdrGridPoint.directed.set(0.0f);
-			for (int k = 0; k < MAX_LIGHTMAPS; k++)
+			for (int k = 0; k < MAX_LIGHTMAPS_RBSP; k++)
 			{
 				hdrGridPoint.ambient += inRaw.ambient[k];
 				hdrGridPoint.directed += inRaw.directed[k];
@@ -213,7 +213,7 @@ static void AddLightGridLumps( FILE *file, rbspHeader_t& header ){
 		a = LittleShort( a );
 
 	/* write lumps */
-	AddLump( file, header.lumps[LUMP_LIGHTGRID], gridPoints );
+	AddLump( file, header.lumps[LUMP_LIGHTGRID], std::vector<rbspGridPoint_t>( gridPoints.begin(), gridPoints.end() ) );
 	AddLump( file, header.lumps[LUMP_LIGHTARRAY], gridArray );
 
 	if (hdr) {
@@ -282,8 +282,8 @@ void LoadRBSPFile( const char *filename ){
 	CopyLump( (bspHeader_t*) header, LUMP_LEAFBRUSHES, bspLeafBrushes );
 	CopyLump( (bspHeader_t*) header, LUMP_BRUSHES, bspBrushes );
 	CopyLump( (bspHeader_t*) header, LUMP_BRUSHSIDES, bspBrushSides );
-	CopyLump( (bspHeader_t*) header, LUMP_DRAWVERTS, bspDrawVerts );
-	CopyLump( (bspHeader_t*) header, LUMP_SURFACES, bspDrawSurfaces );
+	CopyLump<bspDrawVert_t, rbspDrawVert_t>( (bspHeader_t*) header, LUMP_DRAWVERTS, bspDrawVerts );
+	CopyLump<bspDrawSurface_t, rbspDrawSurface_t>( (bspHeader_t*) header, LUMP_SURFACES, bspDrawSurfaces );
 	CopyLump( (bspHeader_t*) header, LUMP_FOGS, bspFogs );
 	CopyLump( (bspHeader_t*) header, LUMP_DRAWINDEXES, bspDrawIndexes );
 	CopyLump( (bspHeader_t*) header, LUMP_VISIBILITY, bspVisBytes );
@@ -330,8 +330,8 @@ void WriteRBSPFile( const char *filename ){
 	AddLump( file, header.lumps[LUMP_LEAFSURFACES], bspLeafSurfaces );
 	AddLump( file, header.lumps[LUMP_LEAFBRUSHES], bspLeafBrushes );
 	AddLump( file, header.lumps[LUMP_MODELS], bspModels );
-	AddLump( file, header.lumps[LUMP_DRAWVERTS], bspDrawVerts );
-	AddLump( file, header.lumps[LUMP_SURFACES], bspDrawSurfaces );
+	AddLump( file, header.lumps[LUMP_DRAWVERTS], std::vector<rbspDrawVert_t>( bspDrawVerts.begin(), bspDrawVerts.end() ) );
+	AddLump( file, header.lumps[LUMP_SURFACES], std::vector<rbspDrawSurface_t>( bspDrawSurfaces.begin(), bspDrawSurfaces.end() ) );
 	AddLump( file, header.lumps[LUMP_VISIBILITY], bspVisBytes );
 	AddLump( file, header.lumps[LUMP_LIGHTMAPS], bspLightBytes );
 	AddLightGridLumps( file, header );

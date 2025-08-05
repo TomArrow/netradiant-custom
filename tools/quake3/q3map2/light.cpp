@@ -1807,21 +1807,21 @@ static void SetupGrid(){
 
 	/* allocate and clear lightgrid */
 	{
-		static_assert( MAX_LIGHTMAPS == 4 );
+		static_assert( MAX_LIGHTMAPS == 14 );
 		rawGridPoints = decltype( rawGridPoints )( numGridPoints, rawGridPoint_t{
-			{ ambientColor, ambientColor, ambientColor, ambientColor },
-			{ g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity },
-			{ g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity },
-			{ LS_NORMAL, LS_NONE, LS_NONE, LS_NONE } } );
+			{ ambientColor, ambientColor, ambientColor, ambientColor, ambientColor, ambientColor, ambientColor, ambientColor, ambientColor, ambientColor, ambientColor, ambientColor, ambientColor, ambientColor },
+			{ g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity },
+			{ g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity },
+			{ LS_NORMAL, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE } } );
 		rawScaledGridPoints = decltype(rawScaledGridPoints)( numGridPoints, rawGridPoint_t{ // for HDR lightgrid
-			{ Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f) },
-			{ Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f) },
-			{ Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f) },
-			{ LS_NORMAL, LS_NONE, LS_NONE, LS_NONE } } );
+			{ Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f) },
+			{ Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f) },
+			{ Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f) },
+			{ LS_NORMAL, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE } } );
 		bspGridPoints = decltype( bspGridPoints )( numGridPoints, bspGridPoint_t{
-			{ Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ) },
-			{ Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ) },
-			{ LS_NORMAL, LS_NONE, LS_NONE, LS_NONE },
+			{ Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ) },
+			{ Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ), Vector3b( 0 ) },
+			{ LS_NORMAL, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE },
 			{ 0, 0 } } );
 	}
 

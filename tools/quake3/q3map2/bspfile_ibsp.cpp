@@ -131,7 +131,7 @@ struct ibspDrawSurface_t
 		patchWidth    ( other.patchWidth ),
 		patchHeight   ( other.patchHeight ) {}
 	operator bspDrawSurface_t() const {
-		static_assert( MAX_LIGHTMAPS == 4 );
+		static_assert( MAX_LIGHTMAPS == 14 );
 		return{
 			shaderNum,
 			fogNum,
@@ -140,11 +140,11 @@ struct ibspDrawSurface_t
 			numVerts,
 			firstIndex,
 			numIndexes,
-			{ LS_NORMAL, LS_NONE, LS_NONE, LS_NONE },
-			{ LS_NORMAL, LS_NONE, LS_NONE, LS_NONE },
-			{ lightmapNum, -3, -3, -3 },
-			{ lightmapX, 0, 0, 0 },
-			{ lightmapY, 0, 0, 0 },
+			{ LS_NORMAL, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE },
+			{ LS_NORMAL, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE },
+			{ lightmapNum, -3, -3, -3, -3, -3, -3, -3, -3, -3, -3, -3, -3, -3 },
+			{ lightmapX, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+			{ lightmapY, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 			lightmapWidth,
 			lightmapHeight,
 			lightmapOrigin,
@@ -172,13 +172,13 @@ struct ibspDrawVert_t
 		normal  ( other.normal ),
 		color   ( other.color[0] ) {}
 	operator bspDrawVert_t() const {
-		static_assert( MAX_LIGHTMAPS == 4 );
+		static_assert( MAX_LIGHTMAPS == 14 );
 		return {
 			xyz,
 			st,
-			{ lightmap, Vector2( 0, 0 ), Vector2( 0, 0 ), Vector2( 0, 0 ) },
+			{ lightmap, Vector2( 0, 0 ), Vector2( 0, 0 ), Vector2( 0, 0 ), Vector2( 0, 0 ), Vector2( 0, 0 ), Vector2( 0, 0 ), Vector2( 0, 0 ), Vector2( 0, 0 ), Vector2( 0, 0 ), Vector2( 0, 0 ), Vector2( 0, 0 ), Vector2( 0, 0 ), Vector2( 0, 0 ) },
 			normal,
-			{ color, Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ) }
+			{ color, Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ), Color4b( 0, 0, 0, 0 ) }
 		};
 	}
 };
@@ -196,11 +196,11 @@ struct ibspGridPoint_t
 		directed( other.directed[0] ),
 		latLong { other.latLong[0], other.latLong[1] } {}
 	operator bspGridPoint_t() const {
-		static_assert( MAX_LIGHTMAPS == 4 );
+		static_assert( MAX_LIGHTMAPS == 14 );
 		return {
-			{ ambient, ambient, ambient, ambient },
-			{ directed, directed, directed, directed },
-			{ LS_NORMAL, LS_NONE, LS_NONE, LS_NONE },
+			{ ambient, ambient, ambient, ambient, Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0) },
+			{ directed, directed, directed, directed, Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0), Vector3b(0) },
+			{ LS_NORMAL, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE },
 			{ latLong[0], latLong[1] }
 		};
 	}
