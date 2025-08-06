@@ -3301,6 +3301,10 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 							hdrVert[j].direction[lightmapNum][1] = dir[1];
 							hdrVert[j].direction[lightmapNum][2] = dir[2];
 						}
+#if HDR_VERTVERSION == 2
+						hdrVert[j].lightmap[lightmapNum][0] = dv[j].lightmap[lightmapNum][0]; 
+						hdrVert[j].lightmap[lightmapNum][1] = dv[j].lightmap[lightmapNum][1]; 
+#endif
 					}
 
 					/* store to bytes */

@@ -359,6 +359,7 @@ struct bspVertHDRV2_t
 	Vector3 color[ MAX_LIGHTMAPS ];
 	byte styles[ MAX_LIGHTMAPS ];
 	Vector3 direction[ MAX_LIGHTMAPS ];
+	float	lightmap[MAX_LIGHTMAPS][2];
 };
 struct bspGridPointHDR_t
 {
