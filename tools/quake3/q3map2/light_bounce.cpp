@@ -872,6 +872,7 @@ void RadCreateDiffuseLights(){
 				         "\"light\" \"%d\"\n"
 				         "\"origin\" \"%.0f %.0f %.0f\"\n"
 				         "\"_color\" \"%.3f %.3f %.3f\"\n"
+				         "\"style\" \"%d\"\n"
 				         "}\n",
 
 				         (int) light.add,
@@ -882,7 +883,8 @@ void RadCreateDiffuseLights(){
 
 				         light.color[ 0 ],
 				         light.color[ 1 ],
-				         light.color[ 2 ] );
+				         light.color[ 2 ],
+						 light.style );
 			}
 			fclose( file );
 		}
