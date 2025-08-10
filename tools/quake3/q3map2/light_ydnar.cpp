@@ -2468,10 +2468,10 @@ void IlluminateRawLightmap( int rawLightmapNum ){
 		}
 
 		/* clear styled lightmaps */
-		size = lm->sw * lm->sh * sizeof( *lm->superLuxels[0] );
 		for ( lightmapNum = 1; lightmapNum < MAX_LIGHTMAPS; lightmapNum++ )
 		{
 			if ( lm->superLuxels[ lightmapNum ] != NULL ) {
+				size = lm->sw * lm->sh * sizeof( *lm->superLuxels[0] );
 				memset( lm->superLuxels[ lightmapNum ], 0, size );
 			}
 			if ( deluxemap && lm->superDeluxels[ lightmapNum ] != NULL ) {
