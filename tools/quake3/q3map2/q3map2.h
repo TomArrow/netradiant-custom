@@ -1437,6 +1437,7 @@ struct rawGridPoint_t
 	Vector3 directed[ MAX_LIGHTMAPS ];
 	Vector3 dir[ MAX_LIGHTMAPS ];
 	byte styles[ MAX_LIGHTMAPS ];
+	int numStyles;
 };
 
 struct hdrGridPoint_t

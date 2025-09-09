@@ -1453,7 +1453,7 @@ struct contribution_t
 };
 
 static void TraceGrid( int num ){
-	int i, j, x, y, z, mod, numCon, numStyles;
+	int i, j, x, y, z, mod, numCon;//, numStyles;
 	float d, step;
 	Vector3 cheapColor; 
 	Vector3 thisdir[ MAX_LIGHTMAPS ];
@@ -1519,7 +1519,10 @@ static void TraceGrid( int num ){
 	numCon = 0;
 	cheapColor.set( 0 );
 
-	numStyles = 1;
+	if(gp->numStyles < 1 ){
+		gp->numStyles = 1;
+	}
+	//numStyles = 1;
 
 	/* trace to all the lights, find the major light direction, and divide the
 	   total light between that along the direction and the remaining in the ambient */
@@ -1550,7 +1553,7 @@ static void TraceGrid( int num ){
 		addSize = vector3_length( trace.color );
 		
 		/* find appropriate style */ // TA: Doing it here now because I'm accumulating the dir per style
-		for ( j = 0; j < numStyles; j++ )
+		for ( j = 0; j < gp->numStyles; j++ )
 		{
 			if ( gp->styles[ j ] == trace.light->style ) {
 				break;
@@ -1558,13 +1561,13 @@ static void TraceGrid( int num ){
 		}
 
 		/* style not found? */
-		if ( j >= numStyles ) {
+		if ( j >= gp->numStyles ) {
 			/* add a new style */
-			if ( numStyles < MAX_LIGHTMAPS ) {
-				hdrGp->styles[ numStyles ] = trace.light->style;
-				gp->styles[ numStyles ] = trace.light->style;
-				bgp->styles[ numStyles ] = trace.light->style;
-				numStyles++;
+			if ( gp->numStyles < MAX_LIGHTMAPS ) {
+				hdrGp->styles[ gp->numStyles ] = trace.light->style;
+				gp->styles[ gp->numStyles ] = trace.light->style;
+				bgp->styles[ gp->numStyles ] = trace.light->style;
+				gp->numStyles++;
 				//%	Sys_Printf( "(%d, %d) ", num, contributions[ i ].style );
 			}
 
@@ -1642,7 +1645,7 @@ static void TraceGrid( int num ){
 	for ( i = 0; i < numCon; i++ )
 	{
 		/* find appropriate style */
-		for ( j = 0; j < numStyles; j++ )
+		for ( j = 0; j < gp->numStyles; j++ )
 		{
 			if ( gp->styles[ j ] == contributions[ i ].style ) {
 				break;
@@ -1650,13 +1653,13 @@ static void TraceGrid( int num ){
 		}
 
 		/* style not found? */
-		if ( j >= numStyles ) {
+		if ( j >= gp->numStyles ) {
 			/* add a new style */
-			if ( numStyles < MAX_LIGHTMAPS ) {
-				hdrGp->styles[ numStyles ] = contributions[ i ].style;
-				gp->styles[ numStyles ] = contributions[ i ].style;
-				bgp->styles[ numStyles ] = contributions[ i ].style;
-				numStyles++;
+			if ( gp->numStyles < MAX_LIGHTMAPS ) {
+				hdrGp->styles[ gp->numStyles ] = contributions[ i ].style;
+				gp->styles[ gp->numStyles ] = contributions[ i ].style;
+				bgp->styles[ gp->numStyles ] = contributions[ i ].style;
+				gp->numStyles++;
 				//%	Sys_Printf( "(%d, %d) ", num, contributions[ i ].style );
 			}
 
@@ -1812,7 +1815,8 @@ static void SetupGrid(){
 			{ ambientColor, ambientColor, ambientColor, ambientColor, ambientColor, ambientColor, ambientColor, ambientColor, ambientColor, ambientColor, ambientColor, ambientColor, ambientColor, ambientColor },
 			{ g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity },
 			{ g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity, g_vector3_identity },
-			{ LS_NORMAL, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE } } );
+			{ LS_NORMAL, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE, LS_NONE },
+			1 } );
 		rawScaledGridPoints = decltype(rawScaledGridPoints)( numGridPoints, rawGridPoint_t{ // for HDR lightgrid
 			{ Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f) },
 			{ Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f), Vector3(0.0f) },
