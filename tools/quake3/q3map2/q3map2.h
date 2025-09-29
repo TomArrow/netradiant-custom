@@ -154,6 +154,9 @@ enum class EBrushType
 
 
 /* light */
+#define MULTISUN_MAX			2048 // TA: multi sun. this is how many separate suns can be drawn separately and only where they should
+#define MULTISUN_MAX_BYTES		(MULTISUN_MAX/8) // it's a bitmask. 256 bytes in the end.
+
 #define MAX_TRACE_TEST_NODES    256
 #define DEFAULT_INHIBIT_RADIUS  1.5f
 
@@ -731,7 +734,7 @@ struct shaderInfo_t
 
 	std::vector<skylight_t>  skylights;                 /* ydnar */
 	std::vector<sun_t>  suns;                           /* ydnar */
-	std::set<int>  environmentLightIndizi;           	/* TA: multisun. vector would be faster for low counts but bloat for insane counts */
+	int	environmentEmitterIndex = -1;           		/* TA: multisun: shaders that end up being used and actually emit sunlight get a unique emitter index */
 
 	Vector3 color{ 0 };                                 /* normalized color */
 	Color4f averageColor = { 0, 0, 0, 0 };
@@ -1248,7 +1251,7 @@ struct trace_t
 	Vector3 end;
 
 	/* TA: multisun support */
-	std::set<int>	skyEnvironmentLightIndizes;
+	byte	skyEnvironmentLightIndices[MULTISUN_MAX_BYTES];
 
 	/* calculated input */
 	Vector3 displacement, direction;
@@ -2173,7 +2176,7 @@ inline const bool exactPointToPolygon = true;
 inline const float formFactorValueScale = 3.0f;
 inline const float linearScale = 1.0f / 8000.0f;
 
-/* TA: multisun stuff (ability to have mutliple skyboxes with separate suns/skylights) */
+/* TA: multisun stuff (ability to have mutliple skyboxes with separate suns/skylights). May not handle _skybox properly */
 inline bool multiSun = false;
 inline int nextEnvironmentLightIndex = 0; // each shader environment light (sun/sky) gets a unique index. thus we can check whether a sky surface should be considered as a successful trace
 

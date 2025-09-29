@@ -601,6 +601,16 @@ static void CreateSurfaceLights(){
 		if ( !si->suns.empty() && !nss ) {
 			shaderInfo_t* si_ = const_cast<shaderInfo_t*>( si );   /* FIXME: hack! */
 			Sys_FPrintf( SYS_VRB, "Sun: %s\n", si->shader.c_str() );
+			if(multiSun){
+				if(si->environmentEmitterIndex == -1){
+					// this shader is actually emitting sun/skylight now, so give it an environment emitter index
+					si_->environmentEmitterIndex = nextEnvironmentLightIndex++;
+				}
+				// let the suns know
+				for( auto sunIt = si_->suns.begin(); sunIt != si_->suns.end(); sunIt++ ){
+					sunIt->environmentLightIndex = si_->environmentEmitterIndex;
+				}
+			}
 			std::for_each( si_->suns.begin(), si_->suns.end(), CreateSunLight );
 			si_->suns.clear();   /* FIXME: hack! */
 		}
@@ -608,6 +618,17 @@ static void CreateSurfaceLights(){
 		/* sky light? */
 		if ( !si->skylights.empty() ) {
 			Sys_FPrintf( SYS_VRB, "Sky: %s\n", si->shader.c_str() );
+			if(multiSun){
+				shaderInfo_t* si_ = const_cast<shaderInfo_t*>( si );   /* FIXME: hack! */
+				if(si->environmentEmitterIndex == -1){
+					// this shader is actually emitting sun/skylight now, so give it an environment emitter index
+					si_->environmentEmitterIndex = nextEnvironmentLightIndex++;
+				}
+				// let the skies know
+				for( auto skyIt = si_->skylights.begin(); skyIt != si_->skylights.end(); skyIt++ ){
+					skyIt->environmentLightIndex = si_->environmentEmitterIndex;
+				}
+			}
 			for( const skylight_t& skylight : si->skylights )
 				CreateSkyLights( skylight, si->color, si->lightFilterRadius, si->lightStyle, si->skyParmsImageBase );
 			const_cast<shaderInfo_t*>( si )->skylights.clear();   /* FIXME: hack! */
@@ -1100,7 +1121,7 @@ int LightContributionToSample( trace_t *trace ){
 			/* trace */
 			TraceLine( trace );
 			trace->forceSubsampling *= add;
-			if ( !( trace->compileFlags & C_SKY ) || trace->opaque || multiSun && light->environmentLightIndex != -1 && trace->skyEnvironmentLightIndizes.find(light->environmentLightIndex) == trace->skyEnvironmentLightIndizes.end() ) {
+			if ( !( trace->compileFlags & C_SKY ) || trace->opaque || multiSun && light->environmentLightIndex != -1 && light->environmentLightIndex < MULTISUN_MAX && !bit_is_enabled(trace->skyEnvironmentLightIndices,light->environmentLightIndex) ) {
 				trace->color.set( 0 );
 				trace->directionContribution.set( 0 );
 
@@ -1401,7 +1422,7 @@ static bool LightContributionToPoint( trace_t *trace ){
 		if ( trace->testOcclusion && !trace->forceSunlight ) {
 			/* trace */
 			TraceLine( trace );
-			if ( !( trace->compileFlags & C_SKY ) || trace->opaque || multiSun && light->environmentLightIndex != -1 && trace->skyEnvironmentLightIndizes.find(light->environmentLightIndex) == trace->skyEnvironmentLightIndizes.end() ) {
+			if ( !( trace->compileFlags & C_SKY ) || trace->opaque || multiSun && light->environmentLightIndex != -1 && light->environmentLightIndex < MULTISUN_MAX && !bit_is_enabled(trace->skyEnvironmentLightIndices,light->environmentLightIndex) ) {
 				trace->color.set( 0 );
 				return false;
 			}
