@@ -100,6 +100,7 @@ static void CreateSunLight( sun_t& sun ){
 		light.falloffTolerance = falloffTolerance;
 		light.filterRadius = sun.filterRadius / sun.numSamples;
 		light.style = noStyles ? LS_NORMAL : sun.style;
+		light.environmentLightIndex = sun.environmentLightIndex;
 
 		/* set the light's position out to infinity */
 		light.origin = direction * ( MAX_WORLD_COORD * 8.0f );    /* MAX_WORLD_COORD * 2.0f */
@@ -234,6 +235,7 @@ static void CreateSkyLights( const skylight_t& skylight, const Vector3& color, f
 	sun.deviance = 0.0f;
 	sun.filterRadius = filterRadius;
 	sun.numSamples = 1;
+	sun.environmentLightIndex = skylight.environmentLightIndex;
 	sun.style = noStyles ? LS_NORMAL : style;
 
 	/* setup */
@@ -1098,7 +1100,7 @@ int LightContributionToSample( trace_t *trace ){
 			/* trace */
 			TraceLine( trace );
 			trace->forceSubsampling *= add;
-			if ( !( trace->compileFlags & C_SKY ) || trace->opaque ) {
+			if ( !( trace->compileFlags & C_SKY ) || trace->opaque || multiSun && light->environmentLightIndex != -1 && trace->skyEnvironmentLightIndizes.find(light->environmentLightIndex) == trace->skyEnvironmentLightIndizes.end() ) {
 				trace->color.set( 0 );
 				trace->directionContribution.set( 0 );
 
@@ -1399,7 +1401,7 @@ static bool LightContributionToPoint( trace_t *trace ){
 		if ( trace->testOcclusion && !trace->forceSunlight ) {
 			/* trace */
 			TraceLine( trace );
-			if ( !( trace->compileFlags & C_SKY ) || trace->opaque ) {
+			if ( !( trace->compileFlags & C_SKY ) || trace->opaque || multiSun && light->environmentLightIndex != -1 && trace->skyEnvironmentLightIndizes.find(light->environmentLightIndex) == trace->skyEnvironmentLightIndizes.end() ) {
 				trace->color.set( 0 );
 				return false;
 			}
@@ -2570,6 +2572,10 @@ int LightMain( Args& args ){
 		while ( args.takeArg( "-deluxe", "-deluxemap" ) ) {
 			deluxemap = true;
 			Sys_Printf( "Generating deluxemaps for average light direction\n" );
+		}
+		while ( args.takeArg( "-multisun" ) ) {
+			multiSun = true;
+			Sys_Printf( "Multi-sun support activated\n" );
 		}
 		while ( args.takeArg( "-hdr" ) ) {
 			hdr = true;

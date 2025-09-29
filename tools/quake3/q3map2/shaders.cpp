@@ -1082,6 +1082,11 @@ static void ParseShaderFile( const char *filename ){
 				/* ydnar: extended sun directive? */
 				const bool ext = striEqual( token, "q3map_sunext" );
 
+				if(multiSun){
+					sun.environmentLightIndex = nextEnvironmentLightIndex++;
+					si->environmentLightIndizi.insert(sun.environmentLightIndex);
+				}
+
 				/* set style */
 				sun.style = si->lightStyle;
 
@@ -1217,6 +1222,12 @@ static void ParseShaderFile( const char *filename ){
 				/* ydnar/splashdamage: q3map_skyLight <value> <iterations> */
 				else if ( striEqual( token, "q3map_skyLight" )  ) {
 					skylight_t& skylight = si->skylights.emplace_back();
+					
+					if(multiSun){
+						skylight.environmentLightIndex = nextEnvironmentLightIndex++;
+						si->environmentLightIndizi.insert(skylight.environmentLightIndex);
+					}
+
 					text.GetToken( false );
 					skylight.value = atof( token );
 					text.GetToken( false );

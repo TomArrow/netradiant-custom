@@ -66,6 +66,7 @@
 #include "stream/stringstream.h"
 #include "bitflags.h"
 #include <list>
+#include <set>
 #include <forward_list>
 #include <algorithm>
 #include "qmath.h"
@@ -563,6 +564,7 @@ struct sun_t
 	Vector3 direction, color;
 	float photons, deviance, filterRadius;
 	int numSamples, style;
+	int environmentLightIndex = -1;
 };
 
 struct skylight_t
@@ -572,6 +574,7 @@ struct skylight_t
 	int horizon_min = 0;
 	int horizon_max = 90;
 	bool sample_color = true;
+	int environmentLightIndex = -1;
 };
 
 
@@ -728,6 +731,7 @@ struct shaderInfo_t
 
 	std::vector<skylight_t>  skylights;                 /* ydnar */
 	std::vector<sun_t>  suns;                           /* ydnar */
+	std::set<int>  environmentLightIndizi;           	/* TA: multisun. vector would be faster for low counts but bloat for insane counts */
 
 	Vector3 color{ 0 };                                 /* normalized color */
 	Color4f averageColor = { 0, 0, 0, 0 };
@@ -1215,6 +1219,8 @@ struct light_t
 
 	float falloffTolerance;             /* ydnar: minimum attenuation threshold */
 	float filterRadius;                 /* ydnar: lightmap filter radius in world units, 0 == default */
+
+	int environmentLightIndex = -1;		/* TA: For sun/skylights. Check if particular sky triangle emits a given light  */
 };
 
 
@@ -1238,8 +1244,11 @@ struct trace_t
 	float inhibitRadius;                /* sphere in which occluding geometry is ignored */
 
 	/* per-light input */
-	const light_t             *light;
+	const light_t             *light = nullptr;
 	Vector3 end;
+
+	/* TA: multisun support */
+	std::set<int>	skyEnvironmentLightIndizes;
 
 	/* calculated input */
 	Vector3 displacement, direction;
@@ -2163,6 +2172,10 @@ inline float falloffTolerance = 1.0f;
 inline const bool exactPointToPolygon = true;
 inline const float formFactorValueScale = 3.0f;
 inline const float linearScale = 1.0f / 8000.0f;
+
+/* TA: multisun stuff (ability to have mutliple skyboxes with separate suns/skylights) */
+inline bool multiSun = false;
+inline int nextEnvironmentLightIndex = 0; // each shader environment light (sun/sky) gets a unique index. thus we can check whether a sky surface should be considered as a successful trace
 
 inline std::list<light_t> lights;
 inline int numPointLights;
