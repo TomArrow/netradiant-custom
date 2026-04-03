@@ -1957,6 +1957,7 @@ inline int g_globalSurfaceFlags;
 inline String64 globalCelShader;
 inline bool keepLights;
 inline bool keepModels;
+inline bool brushToPatch;
 
 #if Q3MAP2_EXPERIMENTAL_SNAP_NORMAL_FIX
 // Increasing the normalEpsilon to compensate for new logic in SnapNormal(), where

@@ -31,8 +31,6 @@
 /* dependencies */
 #include "q3map2.h"
 
-
-
 /* FIXME: remove these vars */
 
 /* undefine to make plane finding use linear sort (note: really slow) */
@@ -1645,6 +1643,147 @@ static bool ParseMapEntity( bool onlyLights, bool noCollapseGroups, int mapEntit
 
 
 
+static void BrushToPatch(){
+	/* dump the lights generated to a file */
+	if ( brushToPatch ) {
+		char dumpName[ 1024 ], ext[ 64 ];
+
+		strcpy( dumpName, source );
+		sprintf( ext, "_brushToPatch.map" );
+		path_set_extension( dumpName, ext );
+		FILE *file = fopen( dumpName, "wb" );
+		Sys_Printf( "Writing %s...\n", dumpName );
+		if ( file ) {
+			fprintf( file,
+				"{\n"
+				"\"classname\" \"worldspawn\"\n");
+
+			for ( const entity_t& entity : entities )
+			{
+				for (const brush_t& brush: entity.brushes)
+				{
+					for(const side_t& side : brush.sides)
+					{
+						if(!side.winding.size()){
+							continue;
+						}
+						
+						Vector3 texX, texY;
+						ComputeAxisBase( mapplanes[ side.planenum ].normal(), texX, texY );
+
+						const char* shaderName = side.shaderInfo->shader.c_str();
+
+						if(!strnicmp(shaderName,"textures/",9)){
+							shaderName += 9;
+						}
+
+						#define BRUSHTOPATCH_MAX_POINTS 8
+						// rn we hardcode a 5x5 patch. which supports up to 8 precisely defined points. (the other points act more like tangents influencing the curvature)
+						const size_t fillOrderPriority[BRUSHTOPATCH_MAX_POINTS][2]{{0,0},{0,4},{4,4},{4,0},{2,4},{4,2},{2,0}}; // we first fill in the corners, then the in-betweens
+						const size_t fillOrder[BRUSHTOPATCH_MAX_POINTS][2]{{0,0},{0,2},{0,4},{2,4},{4,4},{4,2},{4,0},{2,0}}; // the actual order to fill in, to maintain the winding
+						
+						bool verticesSet[5][5]={{false}};
+						Vector3 vertices[5][5]={{{0,0,0}}};
+						Vector2 texCoords[5][5]={{{0,0}}};
+
+						size_t vertCount = std::min((size_t)BRUSHTOPATCH_MAX_POINTS,side.winding.size());
+						for(size_t i=0;i<vertCount;i++){
+							verticesSet[fillOrderPriority[i][0]][fillOrderPriority[i][1]] = true;
+						}
+						size_t vertsToSet = vertCount;
+						size_t vertIndex = 0;
+						for(size_t i=0;i<BRUSHTOPATCH_MAX_POINTS;i++){
+							if(verticesSet[fillOrder[i][0]][fillOrder[i][1]]){
+								vertices[fillOrder[i][0]][fillOrder[i][1]] = side.winding[vertIndex++];
+							}
+						}
+
+						// now we got the right vertices set in the right order 
+						// so we now go through all the edge vertices and fill in any gaps
+						// first fill in the remaining precise points
+						size_t prevIndex = 0;
+						for(size_t i=0;i<BRUSHTOPATCH_MAX_POINTS;i++){
+							if(!verticesSet[fillOrder[i][0]][fillOrder[i][1]]){
+								size_t prevIndex = i-1; // 0 should always be set, so this is safe. we skip brush sides with 0 vertices, if that can even happen.
+								size_t nextIndex = i+1;
+								while(!verticesSet[fillOrder[nextIndex%BRUSHTOPATCH_MAX_POINTS][0]][fillOrder[nextIndex%BRUSHTOPATCH_MAX_POINTS][1]]){
+									nextIndex++; // keep moving around until we find a valid source vertex
+								}
+								float lerp = (float)(i-prevIndex)/(float)((i-prevIndex)+(nextIndex-i));
+								nextIndex = nextIndex % BRUSHTOPATCH_MAX_POINTS;
+								vertices[fillOrder[i][0]][fillOrder[i][1]] = (vertices[fillOrder[prevIndex][0]][fillOrder[prevIndex][1]]*(1.0f-lerp)+vertices[fillOrder[nextIndex][0]][fillOrder[nextIndex][1]]*(lerp));
+							} else{
+								prevIndex = i;
+							}
+						}
+
+						// now fill in the tangent-ish points
+						for(size_t i=0;i<BRUSHTOPATCH_MAX_POINTS;i++){
+							size_t nextPoint = (i+1)%BRUSHTOPATCH_MAX_POINTS;
+							size_t nextTangPoint[2];
+							nextTangPoint[0] = (fillOrder[i][0] + fillOrder[nextPoint][0])/2;
+							nextTangPoint[1] = (fillOrder[i][1] + fillOrder[nextPoint][1])/2;
+							vertices[nextTangPoint[0]][nextTangPoint[1]] = (vertices[fillOrder[i][0]][fillOrder[i][1]] + vertices[fillOrder[nextPoint][0]][fillOrder[nextPoint][1]])*0.5f;
+						}
+						
+						// now fill all the rows and columns
+						for(int i=1;i<4;i++){
+							for(int j=1;j<4;j++){
+								float lerp1 = (float)j/4.0f;
+								float lerp2 = (float)i/4.0f;
+								vertices[i][j] = (vertices[i][0]*(1.0f-lerp1)+vertices[i][4]*lerp1+vertices[0][j]*(1.0f-lerp2)+vertices[4][j]*lerp2)*0.5f;
+							}
+						}
+
+						// calculate tex coords
+						for(int i=0;i<5;i++){
+							for(int j=0;j<5;j++){
+								Vector3 vTranslated = vertices[i][j] + entity.originbrush_origin;
+								float x = vector3_dot( vTranslated, texX );
+								float y = vector3_dot( vTranslated, texY );
+								texCoords[i][j][0] = side.texMat[ 0 ][ 0 ] * x + side.texMat[ 0 ][ 1 ] * y + side.texMat[ 0 ][ 2 ];
+								texCoords[i][j][1] = side.texMat[ 1 ][ 0 ] * x + side.texMat[ 1 ][ 1 ] * y + side.texMat[ 1 ][ 2 ];
+								//texCoords[i][j][0] = vector4_dot(side.vecs[0],vertPos); 
+								//texCoords[i][j][1] = vector4_dot(side.vecs[1],vertPos); 
+							}
+						}
+
+#define QUICKVERT(a,b)  vertices[a][b].x(),vertices[a][b].y(),vertices[a][b].z(),texCoords[a][b].x(),texCoords[a][b].y()
+						fprintf( file,
+							"{\n"
+							"patchDef2 // from %d vertices\n"
+							"{\n"
+							"%s\n"
+							"( 5 5 0 0 0 )\n"
+							"(\n"
+							"( ( %f %f %f %f %f ) ( %f %f %f %f %f ) ( %f %f %f %f %f ) ( %f %f %f %f %f ) ( %f %f %f %f %f ) )\n"
+							"( ( %f %f %f %f %f ) ( %f %f %f %f %f ) ( %f %f %f %f %f ) ( %f %f %f %f %f ) ( %f %f %f %f %f ) )\n"
+							"( ( %f %f %f %f %f ) ( %f %f %f %f %f ) ( %f %f %f %f %f ) ( %f %f %f %f %f ) ( %f %f %f %f %f ) )\n"
+							"( ( %f %f %f %f %f ) ( %f %f %f %f %f ) ( %f %f %f %f %f ) ( %f %f %f %f %f ) ( %f %f %f %f %f ) )\n"
+							"( ( %f %f %f %f %f ) ( %f %f %f %f %f ) ( %f %f %f %f %f ) ( %f %f %f %f %f ) ( %f %f %f %f %f ) )\n"
+							")\n"
+							"}\n"
+							"}\n",
+							(int)side.winding.size(),
+							shaderName,
+							QUICKVERT(0,0),QUICKVERT(0,1),QUICKVERT(0,2),QUICKVERT(0,3),QUICKVERT(0,4),
+							QUICKVERT(1,0),QUICKVERT(1,1),QUICKVERT(1,2),QUICKVERT(1,3),QUICKVERT(1,4),
+							QUICKVERT(2,0),QUICKVERT(2,1),QUICKVERT(2,2),QUICKVERT(2,3),QUICKVERT(2,4),
+							QUICKVERT(3,0),QUICKVERT(3,1),QUICKVERT(3,2),QUICKVERT(3,3),QUICKVERT(3,4),
+							QUICKVERT(4,0),QUICKVERT(4,1),QUICKVERT(4,2),QUICKVERT(4,3),QUICKVERT(4,4)
+							 );
+#undef QUICKVERT
+					}
+				}
+			}
+			fprintf( file,
+				"}\n");
+			fclose( file );
+		}
+	}
+}
+
+
 /*
    LoadMapFile()
    loads a map file into a list of entities
@@ -1717,6 +1856,11 @@ void LoadMapFile( const char *filename, bool onlyLights, bool noCollapseGroups )
 		/* write bogus map */
 		if ( fakemap ) {
 			WriteBSPBrushMap( "fakemap.map", entities[ 0 ].brushes );
+		}
+
+		/* write bogus map */
+		if ( brushToPatch ) {
+			BrushToPatch();
 		}
 	}
 }

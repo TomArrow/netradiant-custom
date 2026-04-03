@@ -696,6 +696,10 @@ int BSPMain( Args& args ){
 			Sys_Printf( "Leaktest enabled\n" );
 			leaktest = true;
 		}
+		while ( args.takeArg( "-brushtopatch" ) ) {
+			Sys_Printf( "Leaktest enabled\n" );
+			brushToPatch = true;
+		}
 		while ( args.takeArg( "-verboseentities" ) ) {
 			Sys_Printf( "Verbose entities enabled\n" );
 			verboseEntities = true;
