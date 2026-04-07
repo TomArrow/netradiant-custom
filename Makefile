@@ -124,11 +124,11 @@ CXXFLAGS_COMMON = -std=c++20 -Wreorder -fno-exceptions -fno-rtti
 
 ifeq ($(BUILD),debug)
 ifeq ($(findstring -g,$(CFLAGS)),)
-	CFLAGS_COMMON += -g
+	CFLAGS_COMMON += -ggdb
 	# only add -g if no -g flag is in $(CFLAGS)
 endif
 ifeq ($(findstring -O,$(CFLAGS)),)
-	CFLAGS_COMMON += -O
+	CFLAGS_COMMON += -Og
 	# only add -O if no -O flag is in $(CFLAGS)
 endif
 	CPPFLAGS_COMMON +=
@@ -137,7 +137,7 @@ else
 
 ifeq ($(BUILD),extradebug)
 ifeq ($(findstring -g,$(CFLAGS)),)
-	CFLAGS_COMMON += -g3
+	CFLAGS_COMMON += -ggdb3
 	# only add -g3 if no -g flag is in $(CFLAGS)
 endif
 	CPPFLAGS_COMMON += -D_DEBUG
@@ -146,7 +146,7 @@ else
 
 ifeq ($(BUILD),extradebug_quicker)
 ifeq ($(findstring -g,$(CFLAGS)),)
-	CFLAGS_COMMON += -g3
+	CFLAGS_COMMON += -ggdb3
 	# only add -g3 if no -g flag is in $(CFLAGS)
 endif
 	CPPFLAGS_COMMON += -D_DEBUG -D_DEBUG_QUICKER

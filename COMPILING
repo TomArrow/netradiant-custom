@@ -88,5 +88,7 @@ build:
   make MAKEFILE_CONF=msys2-Makefile.conf BUILD=release -j$(nproc)
 - Typical developer's build:
   make MAKEFILE_CONF=msys2-Makefile.conf DEPENDENCIES_CHECK=off DOWNLOAD_GAMEPACKS=no INSTALL_DLLS=no BUILD=debug RADIANT_ABOUTMSG="NetRadiant custom dev build" -j$(nproc)
+- More debuggy developer's build:
+  make MAKEFILE_CONF=msys2-Makefile.conf DEPENDENCIES_CHECK=off DOWNLOAD_GAMEPACKS=no INSTALL_DLLS=no BUILD=extradebug RADIANT_ABOUTMSG="NetRadiant custom dev build" -j$(nproc)
 run:
 - in the "install" directory, double click radiant.exe

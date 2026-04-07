@@ -1671,10 +1671,16 @@ static void BrushToPatch(){
 						Vector3 texX, texY;
 						ComputeAxisBase( mapplanes[ side.planenum ].normal(), texX, texY );
 
-						const char* shaderName = side.shaderInfo->shader.c_str();
+						const char* shaderName;
+						
+						if(side.shaderInfo){
+							shaderName = side.shaderInfo->shader.c_str();
 
-						if(!strnicmp(shaderName,"textures/",9)){
-							shaderName += 9;
+							if(!strnicmp(shaderName,"textures/",9)){
+								shaderName += 9;
+							}
+						} else {
+							shaderName = "NULL";
 						}
 
 						#define BRUSHTOPATCH_MAX_POINTS 8
