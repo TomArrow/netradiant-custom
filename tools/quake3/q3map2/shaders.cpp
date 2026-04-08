@@ -1752,6 +1752,13 @@ static void ParseShaderFile( const char *filename ){
 				}
 				else if ( striEqual( token, "q3map_styleMarker2" ) ) {  /* uses depthFunc equal */
 					si->styleMarker = 2;
+				}			
+				/* TA: q3map_deluxecull for twosided shaders can allow lightdirection from backside to contribute to deluxemaps as well */
+				else if ( striEqual( token, "q3map_deluxecull" ) ) {
+					text.GetToken( false );
+					if ( striEqual( token, "none" ) || striEqual( token, "disable" ) || striEqual( token, "twosided" ) ) {
+						si->twoSidedDeluxe = true;
+					}
 				}
 
 				/* ydnar: default to searching for q3map_<surfaceparm> */

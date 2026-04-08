@@ -1799,6 +1799,7 @@ void DirtyRawLightmap( int rawLightmapNum ){
 
 	/* twosided lighting (may or may not be a good idea for lightmapped stuff) */
 	trace.twoSided = false;
+	trace.twoSidedDeluxe = false;
 	for ( i = 0; i < trace.numSurfaces; i++ )
 	{
 		/* get surface */
@@ -1807,6 +1808,9 @@ void DirtyRawLightmap( int rawLightmapNum ){
 		/* check twosidedness */
 		if ( info->si->twoSided ) {
 			trace.twoSided = true;
+			if ( info->si->twoSidedDeluxe ) {
+				trace.twoSidedDeluxe = true;
+			}
 			break;
 		}
 	}
@@ -2341,6 +2345,7 @@ void IlluminateRawLightmap( int rawLightmapNum ){
 
 	/* twosided lighting (may or may not be a good idea for lightmapped stuff) */
 	trace.twoSided = false;
+	trace.twoSidedDeluxe = false;
 	for ( i = 0; i < trace.numSurfaces; i++ )
 	{
 		/* get surface */
@@ -2349,6 +2354,9 @@ void IlluminateRawLightmap( int rawLightmapNum ){
 		/* check twosidedness */
 		if ( info->si->twoSided ) {
 			trace.twoSided = true;
+			if ( info->si->twoSidedDeluxe ) {
+				trace.twoSidedDeluxe = true;
+			}
 			break;
 		}
 	}
@@ -3085,6 +3093,7 @@ void IlluminateVertexes( int num ){
 
 		/* twosided lighting */
 		trace.twoSided = info->si->twoSided;
+		trace.twoSidedDeluxe = info->si->twoSidedDeluxe;
 
 		/* make light list for this surface */
 		CreateTraceLightsForSurface( num, &trace );
@@ -4008,6 +4017,7 @@ static void FloodLightRawLightmapPass( rawLightmap_t *lm, Vector3& lmFloodLightR
 	trace.testOcclusion = true;
 	trace.forceSunlight = false;
 	trace.twoSided = true;
+	trace.twoSidedDeluxe = false;
 	trace.recvShadows = lm->recvShadows;
 	trace.numSurfaces = lm->numLightSurfaces;
 	trace.surfaces = &lightSurfaces[ lm->firstLightSurface ];
@@ -4027,6 +4037,10 @@ static void FloodLightRawLightmapPass( rawLightmap_t *lm, Vector3& lmFloodLightR
 			trace.twoSided = true;
 			break;
 		}
+		//if ( info->si->twoSidedDeluxe ) {
+		//	trace.twoSidedDeluxe = true;
+		//	break;
+		//}
 	}
 
 	/* gather floodlight */

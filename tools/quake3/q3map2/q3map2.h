@@ -703,6 +703,7 @@ struct shaderInfo_t
 	bool hasPasses;                                     /* false if the shader doesn't define any rendering passes */
 	bool globalTexture;                                 /* don't normalize texture repeats */
 	bool twoSided;                                      /* cull none */
+	bool twoSidedDeluxe;                                      /* cull none */
 	bool autosprite;                                    /* autosprite shaders will become point lights instead of area lights */
 	bool polygonOffset;                                 /* ydnar: don't face cull this or against this */
 	bool patchShadows;                                  /* have patches casting shadows when using -light for this surface */
@@ -1240,6 +1241,7 @@ struct trace_t
 	const light_t       **lights;
 
 	bool twoSided;
+	bool twoSidedDeluxe;
 
 	/* per-sample input */
 	int cluster;

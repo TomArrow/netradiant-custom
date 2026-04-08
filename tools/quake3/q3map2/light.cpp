@@ -869,7 +869,9 @@ int LightContributionToSample( trace_t *trace ){
 				angle = -angle;
 
 				/* no deluxemap contribution from "other side" light */
-				doAddDeluxe = false;
+				if(!trace->twoSidedDeluxe){
+					doAddDeluxe = false;
+				}
 			}
 
 			/* attenuate */
@@ -882,7 +884,9 @@ int LightContributionToSample( trace_t *trace ){
 				angle = -angle;
 
 				/* no deluxemap contribution from "other side" light */
-				doAddDeluxe = false;
+				if(!trace->twoSidedDeluxe){
+					doAddDeluxe = false;
+				}
 			}
 
 			/* clamp the distance to prevent super hot spots */
@@ -919,7 +923,9 @@ int LightContributionToSample( trace_t *trace ){
 					}
 
 					/* no deluxemap contribution from "other side" light */
-					doAddDeluxe = false;
+					if(!trace->twoSidedDeluxe){
+						doAddDeluxe = false;
+					}
 				}
 				else{
 					return 0;
@@ -929,7 +935,9 @@ int LightContributionToSample( trace_t *trace ){
 			/* also don't deluxe if the direction is on the wrong side */
 			if ( vector3_dot( trace->normal, trace->direction ) < 0 ) {
 				/* no deluxemap contribution from "other side" light */
-				doAddDeluxe = false;
+				if(!trace->twoSidedDeluxe){
+					doAddDeluxe = false;
+				}
 			}
 
 			/* ydnar: moved to here */
@@ -963,7 +971,9 @@ int LightContributionToSample( trace_t *trace ){
 				dot = -dot;
 
 				/* no deluxemap contribution from "other side" light */
-				doAddDeluxe = false;
+				if(!trace->twoSidedDeluxe){
+					doAddDeluxe = false;
+				}
 			}
 
 			/* jal: optional half Lambert attenuation (http://developer.valvesoftware.com/wiki/Half_Lambert) */
@@ -1064,7 +1074,9 @@ int LightContributionToSample( trace_t *trace ){
 				dot = -dot;
 
 				/* no deluxemap contribution from "other side" light */
-				doAddDeluxe = false;
+				if(!trace->twoSidedDeluxe){
+					doAddDeluxe = false;
+				}
 			}
 
 			/* jal: optional half Lambert attenuation (http://developer.valvesoftware.com/wiki/Half_Lambert) */
