@@ -984,7 +984,7 @@ default_CLIPMODEL:
    adds a picomodel into the bsp
  */
 
-void InsertModel( const char *name, const char *skin, int frame, const Matrix4& transform, const std::list<remap_t> *remaps, shaderInfo_t *celShader, entity_t& entity, int castShadows, int recvShadows, int spawnFlags, float lightmapScale, int lightmapSampleSize, float shadeAngle, float clipDepth ){
+void InsertModel( const char *name, const char *skin, int frame, const Matrix4& transform, const std::list<remap_t> *remaps, shaderInfo_t *celShader, entity_t& entity, int castShadows, int recvShadows, int castShadowsExclude, int recvShadowsExclude, int spawnFlags, float lightmapScale, int lightmapSampleSize, float shadeAngle, float clipDepth ){
 	int i, j;
 	const Matrix4 nTransform( matrix4_for_normal_transform( transform ) );
 	const bool transform_lefthanded = MATRIX4_LEFTHANDED == matrix4_handedness( transform );
@@ -1130,6 +1130,8 @@ void InsertModel( const char *name, const char *skin, int frame, const Matrix4& 
 		ds->entityNum = entity.mapEntityNum;
 		ds->castShadows = castShadows;
 		ds->recvShadows = recvShadows;
+		ds->castShadowsExclude = castShadowsExclude;
+		ds->recvShadowsExclude = recvShadowsExclude;
 
 		/* set shader */
 		ds->shaderInfo = si;
@@ -1290,7 +1292,7 @@ void AddTriangleModels( entity_t& eparent ){
 		/* get model frame */
 		const int frame = e.intForKey( "_frame", "frame" );
 
-		int castShadows, recvShadows;
+		int castShadows, recvShadows, castShadowsExclude = 0, recvShadowsExclude = 0;
 		if ( &eparent == &entities[0] ) {    /* worldspawn (and func_groups) default to cast/recv shadows in worldspawn group */
 			castShadows = WORLDSPAWN_CAST_SHADOWS;
 			recvShadows = WORLDSPAWN_RECV_SHADOWS;
@@ -1301,7 +1303,7 @@ void AddTriangleModels( entity_t& eparent ){
 		}
 
 		/* get explicit shadow flags */
-		GetEntityShadowFlags( &e, &eparent, &castShadows, &recvShadows );
+		GetEntityShadowFlags( &e, &eparent, &castShadows, &recvShadows, &castShadowsExclude, &recvShadowsExclude );
 
 		/* get spawnflags */
 		const int spawnFlags = e.intForKey( "spawnflags" );
@@ -1398,6 +1400,6 @@ void AddTriangleModels( entity_t& eparent ){
 
 
 		/* insert the model */
-		InsertModel( model, skin, frame, transform, &remaps, celShader, eparent, castShadows, recvShadows, spawnFlags, lightmapScale, lightmapSampleSize, shadeAngle, clipDepth );
+		InsertModel( model, skin, frame, transform, &remaps, celShader, eparent, castShadows, recvShadows, castShadowsExclude, recvShadowsExclude, spawnFlags, lightmapScale, lightmapSampleSize, shadeAngle, clipDepth );
 	}
 }

@@ -72,7 +72,7 @@ struct metaTriangle_t
 {
 	shaderInfo_t        *si;
 	const side_t        *side;
-	int entityNum, surfaceNum, planeNum, fogNum, sampleSize, castShadows, recvShadows;
+	int entityNum, surfaceNum, planeNum, fogNum, sampleSize, castShadows, recvShadows, castShadowsExclude, recvShadowsExclude;
 	float shadeAngleDegrees;
 	Plane3f plane;
 	Vector3 lightmapAxis;
@@ -172,6 +172,12 @@ struct CompareMetaTriangles
 		else if ( a.recvShadows != b.recvShadows ) {
 			return a.recvShadows < b.recvShadows;
 		}
+		else if ( a.castShadowsExclude != b.castShadowsExclude ) {
+			return a.castShadowsExclude < b.castShadowsExclude;
+		}
+		else if ( a.recvShadowsExclude != b.recvShadowsExclude ) {
+			return a.recvShadowsExclude < b.recvShadowsExclude;
+		}
 		else if ( a.sampleSize != b.sampleSize ) {
 			return a.sampleSize < b.sampleSize;
 		}
@@ -191,6 +197,8 @@ struct CompareMetaTriangles
 		&& ( a.entityNum == b.entityNum )
 		&& ( a.castShadows == b.castShadows )
 		&& ( a.recvShadows == b.recvShadows )
+		&& ( a.castShadowsExclude == b.castShadowsExclude )
+		&& ( a.recvShadowsExclude == b.recvShadowsExclude )
 		&& ( a.sampleSize == b.sampleSize );
 	}
 };
@@ -317,6 +325,8 @@ static void SurfaceToMetaTriangles( mapDrawSurface_t *ds ){
 			src.planeNum = ds->planeNum;
 			src.castShadows = ds->castShadows;
 			src.recvShadows = ds->recvShadows;
+			src.castShadowsExclude = ds->castShadowsExclude;
+			src.recvShadowsExclude = ds->recvShadowsExclude;
 			src.fogNum = ds->fogNum;
 			src.sampleSize = ds->sampleSize;
 			src.shadeAngleDegrees = ds->shadeAngleDegrees;
@@ -1538,6 +1548,8 @@ static void MetaTrianglesToSurface( int *fOld, int *numAdded ){
 		ds->surfaceNum = seed.surfaceNum;
 		ds->castShadows = seed.castShadows;
 		ds->recvShadows = seed.recvShadows;
+		ds->castShadowsExclude = seed.castShadowsExclude;
+		ds->recvShadowsExclude = seed.recvShadowsExclude;
 
 		ds->shaderInfo = seed.si;
 		ds->planeNum = seed.planeNum;

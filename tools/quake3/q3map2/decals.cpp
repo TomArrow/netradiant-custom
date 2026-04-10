@@ -548,6 +548,8 @@ static void ProjectDecalOntoWinding( decalProjector_t *dp, mapDrawSurface_t *ds,
 	ds2->entityNum = ds->entityNum;
 	ds2->castShadows = ds->castShadows;
 	ds2->recvShadows = ds->recvShadows;
+	ds2->castShadowsExclude = ds->castShadowsExclude;
+	ds2->recvShadowsExclude = ds->recvShadowsExclude;
 	ds2->shaderInfo = dp->si;
 	ds2->fogNum = ds->fogNum;   /* why was this -1? */
 	ds2->lightmapScale = ds->lightmapScale;

@@ -121,6 +121,7 @@ static void EmitPlanes(){
 
 static void EmitLeaf( node_t *node ){
 	bspLeaf_t& leaf = bspLeafs.emplace_back();
+	bspLeafExtraInfo_t& leafExtraInfo = bspLeafsExtraInfo.emplace_back();
 
 	leaf.cluster = node->cluster;
 	leaf.area = node->area;
@@ -140,6 +141,7 @@ static void EmitLeaf( node_t *node ){
 
 	/* emit leaf surfaces */
 	if ( node->opaque ) {
+		leafExtraInfo.shadowBehavior = node->shadowBehavior;
 		return;
 	}
 
@@ -329,6 +331,7 @@ void BeginBSPFile(){
 
 	/* leave leaf 0 as an error, because leafs are referenced as negative number nodes */
 	bspLeafs.resize( 1 );
+	bspLeafsExtraInfo.resize( 1 );
 
 	/* ydnar: gs mods: set the first 6 drawindexes to 0 1 2 2 1 3 for triangles and quads */
 	bspDrawIndexes = { 0, 1, 2, 0, 2, 3 };
@@ -352,6 +355,9 @@ void EndBSPFile( bool do_write ){
 	if ( do_write ) {
 		/* write the surface extra file */
 		WriteSurfaceExtraFile( source );
+
+		/* write the leafs extra file */
+		WriteLeafsExtraFile( source );
 
 		/* write the bsp */
 		WriteBSPFile( StringStream( source, ".bsp" ) );

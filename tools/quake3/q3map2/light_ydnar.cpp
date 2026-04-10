@@ -1792,6 +1792,7 @@ void DirtyRawLightmap( int rawLightmapNum ){
 	trace.testOcclusion = true;
 	trace.forceSunlight = false;
 	trace.recvShadows = lm->recvShadows;
+	trace.recvShadowsExclude = lm->recvShadowsExclude;
 	trace.numSurfaces = lm->numLightSurfaces;
 	trace.surfaces = &lightSurfaces[ lm->firstLightSurface ];
 	trace.inhibitRadius = 0.0f;
@@ -2339,6 +2340,7 @@ void IlluminateRawLightmap( int rawLightmapNum ){
 	trace.testOcclusion = !noTrace;
 	trace.forceSunlight = false;
 	trace.recvShadows = lm->recvShadows;
+	trace.recvShadowsExclude = lm->recvShadowsExclude;
 	trace.numSurfaces = lm->numLightSurfaces;
 	trace.surfaces = &lightSurfaces[ lm->firstLightSurface ];
 	trace.inhibitRadius = DEFAULT_INHIBIT_RADIUS;
@@ -3087,6 +3089,7 @@ void IlluminateVertexes( int num ){
 		trace.testOcclusion = ( cpmaHack && lm != NULL ) ? false : !noTrace;
 		trace.forceSunlight = info->si->forceSunlight;
 		trace.recvShadows = info->recvShadows;
+		trace.recvShadowsExclude = info->recvShadowsExclude;
 		trace.numSurfaces = 1;
 		trace.surfaces = &num;
 		trace.inhibitRadius = DEFAULT_INHIBIT_RADIUS;
@@ -4019,6 +4022,7 @@ static void FloodLightRawLightmapPass( rawLightmap_t *lm, Vector3& lmFloodLightR
 	trace.twoSided = true;
 	trace.twoSidedDeluxe = false;
 	trace.recvShadows = lm->recvShadows;
+	trace.recvShadowsExclude = lm->recvShadowsExclude;
 	trace.numSurfaces = lm->numLightSurfaces;
 	trace.surfaces = &lightSurfaces[ lm->firstLightSurface ];
 	trace.inhibitRadius = DEFAULT_INHIBIT_RADIUS;

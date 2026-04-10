@@ -72,6 +72,8 @@ void SetSurfaceExtra( const mapDrawSurface_t& ds ){
 	se.entityNum = ds.entityNum;
 	se.castShadows = ds.castShadows;
 	se.recvShadows = ds.recvShadows;
+	se.castShadowsExclude = ds.castShadowsExclude;
+	se.recvShadowsExclude = ds.recvShadowsExclude;
 	se.sampleSize = ds.sampleSize;
 	se.longestCurve = ds.longestCurve;
 	se.lightmapAxis = ds.lightmapAxis;
@@ -170,6 +172,16 @@ void WriteSurfaceExtraFile( const char *path ){
 			fprintf( sf, "\treceiveShadows %d\n", se->recvShadows );
 		}
 
+		/* cast shadows exclude */
+		if ( se->castShadowsExclude != seDefault.castShadowsExclude || se == &seDefault ) {
+			fprintf( sf, "\tcastShadowsExclude %d\n", se->castShadowsExclude );
+		}
+
+		/* recv shadows */
+		if ( se->recvShadowsExclude != seDefault.recvShadowsExclude || se == &seDefault ) {
+			fprintf( sf, "\treceiveShadowsExclude %d\n", se->recvShadowsExclude );
+		}
+
 		/* lightmap sample size */
 		if ( se->sampleSize != seDefault.sampleSize || se == &seDefault ) {
 			fprintf( sf, "\tsampleSize %d\n", se->sampleSize );
@@ -192,8 +204,6 @@ void WriteSurfaceExtraFile( const char *path ){
 	/* close the file */
 	fclose( sf );
 }
-
-
 
 /*
    LoadSurfaceExtraFile()
@@ -273,6 +283,18 @@ void LoadSurfaceExtraFile( const char *path ){
 				se->recvShadows = atoi( token );
 			}
 
+			/* cast shadows exclude */
+			else if ( striEqual( token, "castShadowsExclude" ) ) {
+				GetToken( false );
+				se->castShadowsExclude = atoi( token );
+			}
+
+			/* recv shadows exclude */
+			else if ( striEqual( token, "receiveShadowsExclude" ) ) {
+				GetToken( false );
+				se->recvShadowsExclude = atoi( token );
+			}
+
 			/* lightmap sample size */
 			else if ( striEqual( token, "sampleSize" ) ) {
 				GetToken( false );
@@ -296,3 +318,158 @@ void LoadSurfaceExtraFile( const char *path ){
 		}
 	}
 }
+
+
+
+
+/*
+   WriteLeafsExtraFile()
+   writes out a leaf extras info file (<map>.lfx)
+   Disgusting hack to be able to have solid leafs respect shadow casting/receiving
+ */
+
+void WriteLeafsExtraFile( const char *path ){
+	/* dummy check */
+	if ( strEmptyOrNull( path ) ) {
+		return;
+	}
+
+	/* note it */
+	Sys_Printf( "--- WriteLeafsExtraFile ---\n" );
+
+	/* open the file */
+	const auto lfxPath = StringStream( path, ".lfx" );
+	Sys_Printf( "Writing %s\n", lfxPath.c_str() );
+	FILE *lfx = SafeOpenWrite( lfxPath, "wt" );
+
+	/* lap through the extras list */
+	for ( int i = 0, size = bspLeafsExtraInfo.size(); i < size; ++i )
+	{
+		/* get extra */
+		const bspLeafExtraInfo_t * const se = &bspLeafsExtraInfo[i];
+		const bspLeaf_t * const sl = i < bspLeafs.size() ? &bspLeafs[i] : NULL;
+
+		/* leaf num */
+		fprintf( lfx, "%d", i );
+
+		/* valid map drawsurf? */
+		if ( sl == NULL ) {
+			fprintf( lfx, "\n" );
+		}
+		else
+		{
+			fprintf( lfx, " // %d surfaces, %d brushes, cluster %d, area %d\n",
+			         sl->numBSPLeafSurfaces,
+			         sl->numBSPLeafBrushes,
+			         sl->cluster,
+			         sl->area
+					 );
+		}
+
+		/* open braces */
+		fprintf( lfx, "{\n" );
+
+		/* shadow behavior */
+		fprintf( lfx, "\tshadowBehaviorSet %d\n", (int)se->shadowBehavior.isSet);
+		fprintf( lfx, "\tcastShadowsExcludeBits ( ");
+		for(int j =0;j<NODESHADOW_MAX_BYTES;j++){
+			fprintf( lfx, "%d ", (int)se->shadowBehavior.castShadowsExcludeBits[j] );
+		}
+		fprintf( lfx, ")\n");
+		fprintf( lfx, "\tcastShadowsBits ( ");
+		for(int j =0;j<NODESHADOW_MAX_BYTES;j++){
+			fprintf( lfx, "%d ", (int)se->shadowBehavior.castShadowsBits[j] );
+		}
+		fprintf( lfx, ")\n");
+		fprintf( lfx, "\tcastShadowsExcludeNegativeBits ( ");
+		for(int j =0;j<NODESHADOW_MAX_BYTES;j++){
+			fprintf( lfx, "%d ", (int)se->shadowBehavior.castShadowsExcludeNegativeBits[j] );
+		}
+		fprintf( lfx, ")\n");
+		fprintf( lfx, "\tcastShadowsNegativeBits ( ");
+		for(int j =0;j<NODESHADOW_MAX_BYTES;j++){
+			fprintf( lfx, "%d ", (int)se->shadowBehavior.castShadowsNegativeBits[j] );
+		}
+		fprintf( lfx, " )\n");
+
+		/* close braces */
+		fprintf( lfx, "}\n\n" );
+	}
+
+	/* close the file */
+	fclose( lfx );
+}
+
+/*
+   LoadLeafsExtraFile()
+   reads a leafs info file (<map>.lfx)
+ */
+
+void LoadLeafsExtraFile( const char *path ){
+	/* dummy check */
+	if ( strEmptyOrNull( path ) ) {
+		return;
+	}
+
+	/* load the file */
+	const auto lfxPath = StringStream( PathExtensionless( path ), ".lfx" );
+
+	/* parse the file */
+	if( !LoadScriptFile( lfxPath, -1 ) )
+		Error( "" );
+
+	/* tokenize it */
+	while ( GetToken( true ) ) /* test for end of file */
+	{
+		bspLeafExtraInfo_t  *se;
+
+		/* surface number */
+		{
+			const int leafNum = atoi( token );
+			if ( leafNum < 0 ) {
+				Error( "LoadLeafsExtraFile(): %s, line %d: bogus leaf num %d", lfxPath.c_str(), scriptline, leafNum );
+			}
+			if( size_t( leafNum ) >= bspLeafsExtraInfo.size() ){
+				if( size_t( leafNum ) >= bspLeafsExtraInfo.capacity() ) // ensure that capacity grows efficiently, as it's not guaranteed for vector::resize()
+					bspLeafsExtraInfo.reserve( bspLeafsExtraInfo.capacity() << 1 );
+				bspLeafsExtraInfo.resize( leafNum + 1 );
+			}
+			se = &bspLeafsExtraInfo[ leafNum ];
+		}
+
+		/* handle { } section */
+		if ( !( GetToken( true ) && strEqual( token, "{" ) ) ) {
+			Error( "LoadLeafsExtraFile(): %s, line %d: { not found", lfxPath.c_str(), scriptline );
+		}
+		while ( GetToken( true ) && !strEqual( token, "}" ) )
+		{
+			/* recv shadows */
+			if ( striEqual( token, "shadowBehaviorSet" ) ) {
+				GetToken( false );
+				se->shadowBehavior.isSet = atoi( token );
+			}
+
+			/* castShadowsExcludeBits */
+			else if ( striEqual( token, "castShadowsExcludeBits" ) ) {
+				Parse1DMatrix( NODESHADOW_MAX_BYTES, se->shadowBehavior.castShadowsExcludeBits );
+			}
+			/* castShadowsBits */
+			else if ( striEqual( token, "castShadowsBits" ) ) {
+				Parse1DMatrix( NODESHADOW_MAX_BYTES, se->shadowBehavior.castShadowsBits );
+			}
+			/* castShadowsExcludeNegativeBits */
+			else if ( striEqual( token, "recvShadowsNegativeBits" ) ) {
+				Parse1DMatrix( NODESHADOW_MAX_BYTES, se->shadowBehavior.castShadowsExcludeNegativeBits );
+			}
+			/* castShadowsNegativeBits */
+			else if ( striEqual( token, "castShadowsNegativeBits" ) ) {
+				Parse1DMatrix( NODESHADOW_MAX_BYTES, se->shadowBehavior.castShadowsNegativeBits );
+			}
+
+			/* ignore all other tokens on the line */
+			while ( TokenAvailable() )
+				GetToken( false );
+		}
+	}
+}
+

@@ -750,6 +750,8 @@ mapDrawSurface_t *DrawSurfaceForSide( const entity_t& e, const brush_t& b, const
 	ds->entityNum = b.entityNum;
 	ds->castShadows = b.castShadows;
 	ds->recvShadows = b.recvShadows;
+	ds->castShadowsExclude = b.castShadowsExclude;
+	ds->recvShadowsExclude = b.recvShadowsExclude;
 
 	ds->planar = true;
 	ds->planeNum = s.planenum;
@@ -926,6 +928,8 @@ mapDrawSurface_t *DrawSurfaceForMesh( const entity_t& e, parseMesh_t *p, mesh_t 
 	ds->entityNum = p->entityNum;
 	ds->castShadows = p->castShadows;
 	ds->recvShadows = p->recvShadows;
+	ds->castShadowsExclude = p->castShadowsExclude;
+	ds->recvShadowsExclude = p->recvShadowsExclude;
 
 	ds->shaderInfo = si;
 	ds->mapMesh = p;
@@ -2896,7 +2900,7 @@ static int AddSurfaceModelsToTriangle_r( mapDrawSurface_t *ds, const surfaceMode
 			}
 
 			/* insert the model */
-			InsertModel( model.model.c_str(), NULL, 0, transform, NULL, ds->celShader, entity, ds->castShadows, ds->recvShadows, 0, ds->lightmapScale, 0, 0, clipDepthGlobal );
+			InsertModel( model.model.c_str(), NULL, 0, transform, NULL, ds->celShader, entity, ds->castShadows, ds->recvShadows, ds->castShadowsExclude, ds->recvShadowsExclude, 0, ds->lightmapScale, 0, 0, clipDepthGlobal );
 
 			/* return to sender */
 			return 1;

@@ -456,6 +456,20 @@ static int FilterBrushIntoTree_r( brush_t&& b, node_t *node ){
 			if ( b.opaque ) {
 				node->opaque = true;
 				node->areaportal = false;
+				
+				node->shadowBehavior.isSet = true;
+
+				// dumb hack: allow opaque leafs to somewhat respect the recvShadows/castShadows stuff
+				if(b.castShadowsExclude < 0 && b.castShadowsExclude >= -NODESHADOW_MAX_VALUE){
+					bit_enable(node->shadowBehavior.castShadowsExcludeNegativeBits,-b.recvShadows);
+				} else if(b.castShadowsExclude > 0 && b.castShadowsExclude <= NODESHADOW_MAX_VALUE){
+					bit_enable(node->shadowBehavior.castShadowsExcludeBits,b.recvShadows);
+				}
+				if(b.castShadows < 0 && b.castShadows >= -NODESHADOW_MAX_VALUE){
+					bit_enable(node->shadowBehavior.castShadowsNegativeBits,-b.castShadows);
+				} else if(b.castShadows > 0 && b.castShadows <= NODESHADOW_MAX_VALUE){
+					bit_enable(node->shadowBehavior.castShadowsBits,b.castShadows);
+				}
 			}
 			else if ( b.compileFlags & C_AREAPORTAL ) {
 				if ( !node->opaque ) {

@@ -265,6 +265,17 @@ struct bspNode_t
 };
 
 
+#define NODESHADOW_MAX_NUM 32 // how many different positive/negative values we can remember for a node's shadow behavior (receive/cast shadows)
+#define NODESHADOW_MAX_VALUE ((NODESHADOW_MAX_NUM)-1)
+#define NODESHADOW_MAX_BYTES ((NODESHADOW_MAX_NUM+7)/8)
+struct nodeShadowBehavior_t {
+	qboolean	isSet;
+	byte castShadowsBits[NODESHADOW_MAX_BYTES];
+	byte castShadowsNegativeBits[NODESHADOW_MAX_BYTES];
+	byte castShadowsExcludeBits[NODESHADOW_MAX_BYTES];
+	byte castShadowsExcludeNegativeBits[NODESHADOW_MAX_BYTES];
+};
+
 struct bspLeaf_t
 {
 	int cluster;                    /* -1 = opaque cluster (do I still store these?) */
@@ -279,6 +290,10 @@ struct bspLeaf_t
 	int numBSPLeafBrushes;
 };
 
+struct bspLeafExtraInfo_t
+{
+	nodeShadowBehavior_t	shadowBehavior;
+};
 
 struct bspBrushSide_t
 {
@@ -843,7 +858,6 @@ struct indexMap_t
 	byte                *pixels;
 };
 
-
 struct brush_t
 {
 	brush_t             *original;          /* chopped up brushes will reference the originals */
@@ -854,6 +868,8 @@ struct brush_t
 	/* ydnar: for shadowcasting entities */
 	int castShadows;
 	int recvShadows;
+	int castShadowsExclude;
+	int recvShadowsExclude;
 
 	shaderInfo_t        *contentShader;
 	shaderInfo_t        *celShader;         /* :) */
@@ -903,6 +919,8 @@ struct parseMesh_t
 	/* ydnar: for shadowcasting entities */
 	int castShadows;
 	int recvShadows;
+	int castShadowsExclude;
+	int recvShadowsExclude;
 
 	mesh_t mesh;
 	shaderInfo_t        *shaderInfo;
@@ -1011,6 +1029,7 @@ struct mapDrawSurface_t
 
 	/* ydnar: shadow group support */
 	int castShadows, recvShadows;
+	int castShadowsExclude, recvShadowsExclude;
 
 	/* ydnar: for patches */
 	float longestCurve;
@@ -1127,6 +1146,7 @@ struct node_t
 	int area;                           /* for areaportals */
 	brushlist_t          brushlist;     /* fragments of all brushes in this leaf */
 	drawSurfRef_t       *drawSurfReferences;
+	nodeShadowBehavior_t	shadowBehavior;
 
 	int occupied;                       /* 1 or greater can reach entity */
 	const entity_t      *occupant;      /* for leak file testing */
@@ -1232,7 +1252,7 @@ struct trace_t
 {
 	/* constant input */
 	bool testOcclusion, forceSunlight, testAll;
-	int recvShadows;
+	int recvShadows, recvShadowsExclude;
 
 	int numSurfaces;
 	int                 *surfaces;
@@ -1348,7 +1368,7 @@ struct rawLightmap_t
 	float floodlightDistance;
 
 	int entityNum;
-	int recvShadows;
+	int recvShadows,recvShadowsExclude;
 	MinMax minmax;
 	Vector3 axis, origin, *vecs;
 	Plane3f                   *plane;
@@ -1467,7 +1487,7 @@ struct surfaceInfo_t
 	const shaderInfo_t  *si;
 	rawLightmap_t       *lm;
 	int parentSurfaceNum, childSurfaceNum;
-	int entityNum, castShadows, recvShadows, sampleSize, patchIterations;
+	int entityNum, castShadows, recvShadows, castShadowsExclude, recvShadowsExclude, sampleSize, patchIterations;
 	float longestCurve;
 	Plane3f               *plane;
 	Vector3 axis;
@@ -1713,7 +1733,7 @@ tree_t                      FaceBSP( facelist_t& list );
 
 /* model.c */
 void                        assimp_init();
-void                        InsertModel( const char *name, const char *skin, int frame, const Matrix4& transform, const std::list<remap_t> *remaps, shaderInfo_t *celShader, entity_t& entity, int castShadows, int recvShadows, int spawnFlags, float lightmapScale, int lightmapSampleSize, float shadeAngle, float clipDepth );
+void                        InsertModel( const char *name, const char *skin, int frame, const Matrix4& transform, const std::list<remap_t> *remaps, shaderInfo_t *celShader, entity_t& entity, int castShadows, int recvShadows, int castShadowsExclude, int recvShadowsExclude, int spawnFlags, float lightmapScale, int lightmapSampleSize, float shadeAngle, float clipDepth );
 void                        AddTriangleModels( entity_t& eparent );
 
 
@@ -1759,7 +1779,9 @@ void                        EmitMetaStats(); // vortex: print meta statistics ev
 void                        SetDefaultSampleSize( int sampleSize );
 void                        SetSurfaceExtra( const mapDrawSurface_t& ds );
 void                        WriteSurfaceExtraFile( const char *path );
+void                        WriteLeafsExtraFile( const char *path );
 void                        LoadSurfaceExtraFile( const char *path );
+void                        LoadLeafsExtraFile( const char *path );
 
 
 /* decals.c */
@@ -1888,7 +1910,7 @@ void                        UnparseEntities();
 void                        PrintEntity( const entity_t *ent );
 
 entity_t                    *FindTargetEntity( const char *target );
-void                        GetEntityShadowFlags( const entity_t *ent, const entity_t *ent2, int *castShadows, int *recvShadows );
+void                        GetEntityShadowFlags( const entity_t *ent, const entity_t *ent2, int *castShadows, int *recvShadows, int *castShadowsExclude, int* recvShadowsExclude );
 void                        InjectCommandLine( const char *stage, const std::vector<const char *>& args );
 
 
@@ -2296,6 +2318,8 @@ inline std::vector<bspShader_t> bspShaders;
 inline std::vector<char> bspEntData;
 
 inline std::vector<bspLeaf_t> bspLeafs; // MAX_MAP_LEAFS
+
+inline std::vector<bspLeafExtraInfo_t> bspLeafsExtraInfo; // dirty hack: allow us to respect recvshadows/castshadows for structural solid leafs in lightpass
 
 inline std::vector<bspPlane_t> bspPlanes;
 

@@ -628,7 +628,7 @@ entity_t *FindTargetEntity( const char *target ){
    note: does not set them to defaults if the keys are not found!
  */
 
-void GetEntityShadowFlags( const entity_t *ent, const entity_t *ent2, int *castShadows, int *recvShadows ){
+void GetEntityShadowFlags( const entity_t *ent, const entity_t *ent2, int *castShadows, int *recvShadows, int *castShadowsExclude, int* recvShadowsExclude ){
 	/* get cast shadows */
 	if ( castShadows != NULL ) {
 		( ent != NULL && ent->read_keyvalue( *castShadows, "_castShadows", "_cs" ) ) ||
@@ -640,6 +640,19 @@ void GetEntityShadowFlags( const entity_t *ent, const entity_t *ent2, int *castS
 		( ent != NULL && ent->read_keyvalue( *recvShadows, "_receiveShadows", "_rs" ) ) ||
 		( ent2 != NULL && ent2->read_keyvalue( *recvShadows, "_receiveShadows", "_rs" ) );
 	}
+	
+	/* get cast shadows */
+	if ( castShadowsExclude != NULL ) {
+		( ent != NULL && ent->read_keyvalue( *castShadowsExclude, "_castShadowsExclude", "_csEx" ) ) ||
+		( ent2 != NULL && ent2->read_keyvalue( *castShadowsExclude, "_castShadowsExclude", "_csEx" ) );
+	}
+
+	/* receive */
+	if ( recvShadowsExclude != NULL ) {
+		( ent != NULL && ent->read_keyvalue( *recvShadowsExclude, "_receiveShadowsExclude", "_rsEx" ) ) ||
+		( ent2 != NULL && ent2->read_keyvalue( *recvShadowsExclude, "_receiveShadowsExclude", "_rsEx" ) );
+	}
+
 
 	/* vortex: game-specific default entity keys */
 	if ( striEqual( g_game->magic, "dq" ) || striEqual( g_game->magic, "prophecy" ) ) {

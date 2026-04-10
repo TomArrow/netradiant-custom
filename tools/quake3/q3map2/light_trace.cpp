@@ -59,7 +59,7 @@ struct traceVert_t
 struct traceInfo_t
 {
 	const shaderInfo_t          *si;
-	int surfaceNum, castShadows;
+	int surfaceNum, castShadows, castShadowsExclude;
 	bool skipGrid;
 };
 
@@ -85,6 +85,7 @@ struct traceNode_t
 	int children[ 2 ];
 	int numItems, maxItems;
 	int                         *items;
+	nodeShadowBehavior_t	shadowBehavior; // dumb hack to allow solid structural leafs to respect recvShadows/castShadows
 };
 
 
@@ -128,6 +129,7 @@ static int AddTraceInfo( traceInfo_t *ti ){
 		if ( traceInfos[ num ].si == ti->si &&
 		     traceInfos[ num ].surfaceNum == ti->surfaceNum &&
 		     traceInfos[ num ].castShadows == ti->castShadows &&
+		     traceInfos[ num ].castShadowsExclude == ti->castShadowsExclude &&
 		     traceInfos[ num ].skipGrid == ti->skipGrid ) {
 			return num;
 		}
@@ -324,6 +326,12 @@ static int SetupTraceNodes_r( int bspNodeNum ){
 
 			if ( bspLeafs[ bspLeafNum ].cluster == -1 ) {
 				traceNodes[ traceNodes[ nodeNum ].children[ i ] ].type = TRACE_LEAF_SOLID;
+				if(bspLeafNum < bspLeafsExtraInfo.size()){
+					// just a safety check since this is hacky af
+					traceNodes[ traceNodes[ nodeNum ].children[ i ] ].shadowBehavior = bspLeafsExtraInfo[ bspLeafNum ].shadowBehavior;
+				} else{
+					traceNodes[ traceNodes[ nodeNum ].children[ i ] ].shadowBehavior.isSet = false;
+				}
 			}
 		}
 
@@ -863,6 +871,7 @@ static void PopulateWithBSPModel( const bspModel_t& model, const Matrix4& transf
 		/* setup trace info */
 		ti.si = info.si;
 		ti.castShadows = info.castShadows;
+		ti.castShadowsExclude = info.castShadowsExclude;
 		ti.surfaceNum = model.firstBSPBrush + i;
 		ti.skipGrid = ( ds.surfaceType == MST_PATCH );
 
@@ -990,7 +999,7 @@ static void PopulateWithBSPModel( const bspModel_t& model, const Matrix4& transf
    filters a picomodel's surfaces into the raytracing tree
  */
 
-static void PopulateWithPicoModel( int castShadows, const std::vector<const AssMeshWalker*>& model, const Matrix4& transform ){
+static void PopulateWithPicoModel( int castShadows, int castShadowsExclude, const std::vector<const AssMeshWalker*>& model, const Matrix4& transform ){
 	traceInfo_t ti;
 	traceWinding_t tw;
 
@@ -1021,6 +1030,7 @@ static void PopulateWithPicoModel( int castShadows, const std::vector<const AssM
 
 		/* setup trace info */
 		ti.castShadows = castShadows;
+		ti.castShadowsExclude = castShadowsExclude;
 		ti.surfaceNum = -1;
 		ti.skipGrid = true; // also ignore picomodels when skipping patches
 
@@ -1064,7 +1074,8 @@ static void PopulateTraceNodes(){
 
 		/* get shadow flags */
 		int castShadows = ENTITY_CAST_SHADOWS;
-		GetEntityShadowFlags( &e, NULL, &castShadows, NULL );
+		int castShadowsExclude = 0;
+		GetEntityShadowFlags( &e, NULL, &castShadows, NULL, &castShadowsExclude, NULL );
 
 		/* early out? */
 		if ( !castShadows ) {
@@ -1115,7 +1126,7 @@ static void PopulateTraceNodes(){
 
 		/* external model */
 		default:
-			PopulateWithPicoModel( castShadows, LoadModelWalker( value, e.intForKey( "_frame", "frame" ) ), transform );
+			PopulateWithPicoModel( castShadows, castShadowsExclude, LoadModelWalker( value, e.intForKey( "_frame", "frame" ) ), transform );
 			continue;
 		}
 
@@ -1140,7 +1151,7 @@ static void PopulateTraceNodes(){
 
 		/* external model */
 		default:
-			PopulateWithPicoModel( castShadows, LoadModelWalker( value, e.intForKey( "_frame2" ) ), transform );
+			PopulateWithPicoModel( castShadows, castShadowsExclude, LoadModelWalker( value, e.intForKey( "_frame2" ) ), transform );
 			continue;
 		}
 	}
@@ -1492,9 +1503,59 @@ static bool TraceLine_r( int nodeNum, const Vector3& origin, const Vector3& end,
 
 		/* solid? */
 		if ( node->type == TRACE_LEAF_SOLID ) {
-			trace->hit = origin;
-			trace->passSolid = true;
-			return true;
+			bool blocksLight = true;
+			
+			// dumb hack: check for shadow behavior
+			if(node->shadowBehavior.isSet){
+				
+				// A leaf can end up with the properties of many brushes
+				// Therefore we can't reliably use the normal _receiveShadows or _castShadows stuff
+				// but we can kinda say ok we wanna exclude shadows from any leaf that has a caster with a specific number
+
+				if(trace->recvShadows > 0 && trace->recvShadows <= NODESHADOW_MAX_VALUE && bit_is_enabled(node->shadowBehavior.castShadowsExcludeBits,trace->recvShadows) ){
+					blocksLight = false;
+				} else if(trace->recvShadowsExclude > 0 && trace->recvShadowsExclude <= NODESHADOW_MAX_VALUE && bit_is_enabled(node->shadowBehavior.castShadowsBits,trace->recvShadowsExclude) ){
+					blocksLight = false;
+				}
+				/*
+				// worldspawn group only receives shadows from positive groups 
+				if(trace->recvShadows == 1){
+					bool anyBitSet = false;
+					for(int i = 0; i<NODESHADOW_MAX_BYTES;i++){
+						if(node->shadowBehavior.castShadowsBits[i]){
+							anyBitSet = true;
+						}
+					}
+					if ( !anyBitSet ) {
+						blocksLight = false;
+					}
+				}
+				// receive shadows from same group and worldspawn group 
+				else if ( trace->recvShadows > 1 ) {
+					if ( !bit_is_enabled(node->shadowBehavior.castShadowsBits,1)  &&
+						trace->recvShadows <= NODESHADOW_MAX_VALUE 
+						&& !bit_is_enabled(node->shadowBehavior.castShadowsBits,trace->recvShadows) 
+						&& !bit_is_enabled(node->shadowBehavior.castShadowsNegativeBits,trace->recvShadows)) {
+						blocksLight = false;
+					}
+					//%	Sys_Printf( "%d:%d ", tt->castShadows, trace->recvShadows );
+				}
+				// receive shadows from the same group only (< 0) 
+				else
+				{
+					if ( trace->recvShadows <= NODESHADOW_MAX_VALUE 
+						&& !bit_is_enabled(node->shadowBehavior.castShadowsBits,trace->recvShadows) 
+						&& !bit_is_enabled(node->shadowBehavior.castShadowsNegativeBits,trace->recvShadows) ) {
+						blocksLight = false;
+					}
+				}*/
+			}
+
+			if(blocksLight){
+				trace->hit = origin;
+				trace->passSolid = true; 
+				return true;
+			}
 		}
 
 		/* leafnode? */

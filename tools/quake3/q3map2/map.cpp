@@ -1547,7 +1547,7 @@ static bool ParseMapEntity( bool onlyLights, bool noCollapseGroups, int mapEntit
 	const bool funcGroup = striEqual( "func_group", classname );
 
 	/* worldspawn (and func_groups) default to cast/recv shadows in worldspawn group */
-	int castShadows, recvShadows;
+	int castShadows, recvShadows, castShadowsExclude=0, recvShadowsExclude=0;
 	if ( funcGroup || mapEnt.mapEntityNum == 0 ) {
 		//%	Sys_Printf( "World:  %d\n", mapEnt.mapEntityNum );
 		castShadows = WORLDSPAWN_CAST_SHADOWS;
@@ -1560,7 +1560,7 @@ static bool ParseMapEntity( bool onlyLights, bool noCollapseGroups, int mapEntit
 	}
 
 	/* get explicit shadow flags */
-	GetEntityShadowFlags( &mapEnt, NULL, &castShadows, &recvShadows );
+	GetEntityShadowFlags( &mapEnt, NULL, &castShadows, &recvShadows, &castShadowsExclude, &recvShadowsExclude );
 
 	/* ydnar: get lightmap scaling value for this entity */
 	const float lightmapScale = std::max( 0.f, mapEnt.floatForKey( "lightmapscale", "_lightmapscale", "_ls" ) );
@@ -1596,6 +1596,8 @@ static bool ParseMapEntity( bool onlyLights, bool noCollapseGroups, int mapEntit
 		brush.entityNum = mapEnt.mapEntityNum;
 		brush.castShadows = castShadows;
 		brush.recvShadows = recvShadows;
+		brush.castShadowsExclude = castShadowsExclude;
+		brush.recvShadowsExclude = recvShadowsExclude;
 		brush.lightmapSampleSize = lightmapSampleSize;
 		brush.lightmapScale = lightmapScale;
 		brush.celShader = celShader;
@@ -1607,6 +1609,8 @@ static bool ParseMapEntity( bool onlyLights, bool noCollapseGroups, int mapEntit
 		patch->entityNum = mapEnt.mapEntityNum;
 		patch->castShadows = castShadows;
 		patch->recvShadows = recvShadows;
+		patch->castShadowsExclude = castShadowsExclude;
+		patch->recvShadowsExclude = recvShadowsExclude;
 		patch->lightmapSampleSize = lightmapSampleSize;
 		patch->lightmapScale = lightmapScale;
 		patch->celShader = celShader;

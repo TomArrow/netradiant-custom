@@ -1545,6 +1545,7 @@ static void TraceGrid( int num ){
 	trace.testOcclusion = !noTrace;
 	trace.forceSunlight = false;
 	trace.recvShadows = WORLDSPAWN_RECV_SHADOWS;
+	trace.recvShadowsExclude = 0;
 	trace.numSurfaces = 0;
 	trace.surfaces = NULL;
 	trace.numLights = 0;
@@ -3061,6 +3062,9 @@ int LightMain( Args& args ){
 
 	/* ydnar: load surface file */
 	LoadSurfaceExtraFile( source );
+
+	/* TA: load leafs extra file (disgusting hack)*/
+	LoadLeafsExtraFile( source );
 
 	/* load bsp file */
 	LoadBSPFile( source );

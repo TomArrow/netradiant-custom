@@ -598,6 +598,7 @@ static bool AddSurfaceToRawLightmap( int num, rawLightmap_t *lm ){
 		if ( info->sampleSize != lm->sampleSize ||
 		     info->entityNum != lm->entityNum ||
 		     info->recvShadows != lm->recvShadows ||
+		     info->recvShadowsExclude != lm->recvShadowsExclude ||
 		     info->si->lmCustomWidth != lm->customWidth ||
 		     info->si->lmCustomHeight != lm->customHeight ||
 		     info->si->lmBrightness != lm->brightness ||
@@ -1003,6 +1004,8 @@ void SetupSurfaceLightmaps(){
 				info->entityNum = se.entityNum;
 				info->castShadows = se.castShadows;
 				info->recvShadows = se.recvShadows;
+				info->castShadowsExclude = se.castShadowsExclude;
+				info->recvShadowsExclude = se.recvShadowsExclude;
 				info->sampleSize = se.sampleSize;
 				info->longestCurve = se.longestCurve;
 				info->patchIterations = IterationsForCurve( info->longestCurve, patchSubdivisions );
@@ -1106,6 +1109,7 @@ void SetupSurfaceLightmaps(){
 		lm->actualSampleSize = lm->sampleSize;
 		lm->entityNum = info->entityNum;
 		lm->recvShadows = info->recvShadows;
+		lm->recvShadowsExclude = info->recvShadowsExclude;
 		lm->brightness = info->si->lmBrightness;
 		lm->filterRadius = info->si->lmFilterRadius;
 		lm->floodlightRGB = info->si->floodlightRGB;
