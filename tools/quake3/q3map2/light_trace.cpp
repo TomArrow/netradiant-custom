@@ -1272,17 +1272,32 @@ static bool TraceTriangle( traceInfo_t *ti, traceTriangle_t *tt, trace_t *trace 
 	int is, it;
 	const byte            *pixel;
 	const shaderInfo_t    *si;
-
+	bool doMegaDebug = false;
+	{
+		//Vector3 megaDebugPoint = Vector3(-2288,4592,-24);
+		//Vector3 megaDebugPoint2 = Vector3(-2272,4668,-28);
+		//if(vector3_length_squared(trace->origin-megaDebugPoint) < 5*5 || vector3_length_squared(trace->origin-megaDebugPoint2) < 5*5){
+		//	doMegaDebug = true;
+		//}
+	}
 
 	/* don't double-trace against sky */
 	si = ti->si;
 	if ( trace->compileFlags & si->compileFlags & C_SKY ) {
+		if(doMegaDebug){
+			Vector3 wouldhit = trace->origin + trace->direction * depth;
+			printf("%s trace from %f %f %f with recvShadows %d MISSED (SKY) at %f %f %f on shader %s with castShadows %d\n", inGrid ? "grid " : "",trace->origin.x(),trace->origin.y(),trace->origin.z(),trace->recvShadows,wouldhit.x(),wouldhit.y(),wouldhit.z(),si->shader ? si->shader.c_str() : "",ti->castShadows);
+		}
 		return false;
 	}
 
 	/* worldspawn group only receives shadows from positive groups */
 	if ( trace->recvShadows == 1 ) {
 		if ( ti->castShadows <= 0 ) {
+			if(doMegaDebug){
+			Vector3 wouldhit = trace->origin + trace->direction * depth;
+			printf("%s trace from %f %f %f with recvShadows %d MISSED (castShadows mismatch 1) at %f %f %f on shader %s with castShadows %d\n", inGrid ? "grid " : "",trace->origin.x(),trace->origin.y(),trace->origin.z(),trace->recvShadows,wouldhit.x(),wouldhit.y(),wouldhit.z(),si->shader ? si->shader.c_str() : "",ti->castShadows);
+			}
 			return false;
 		}
 	}
@@ -1290,6 +1305,10 @@ static bool TraceTriangle( traceInfo_t *ti, traceTriangle_t *tt, trace_t *trace 
 	/* receive shadows from same group and worldspawn group */
 	else if ( trace->recvShadows > 1 ) {
 		if ( ti->castShadows != 1 && abs( ti->castShadows ) != abs( trace->recvShadows ) ) {
+			if(doMegaDebug){
+			Vector3 wouldhit = trace->origin + trace->direction * depth;
+			printf("%s trace from %f %f %f with recvShadows %d MISSED (castShadows mismatch 2) at %f %f %f on shader %s with castShadows %d\n", inGrid ? "grid " : "",trace->origin.x(),trace->origin.y(),trace->origin.z(),trace->recvShadows,wouldhit.x(),wouldhit.y(),wouldhit.z(),si->shader ? si->shader.c_str() : "",ti->castShadows);
+			}
 			return false;
 		}
 		//%	Sys_Printf( "%d:%d ", tt->castShadows, trace->recvShadows );
@@ -1299,13 +1318,22 @@ static bool TraceTriangle( traceInfo_t *ti, traceTriangle_t *tt, trace_t *trace 
 	else
 	{
 		if ( abs( ti->castShadows ) != abs( trace->recvShadows ) ) {
-			return false;
+			if(doMegaDebug){
+			Vector3 wouldhit = trace->origin + trace->direction * depth;
+			printf("%s trace from %f %f %f with recvShadows %d MISSED (castShadows mismatch 3) at %f %f %f on shader %s with castShadows %d\n", inGrid ? "grid " : "",trace->origin.x(),trace->origin.y(),trace->origin.z(),trace->recvShadows,wouldhit.x(),wouldhit.y(),wouldhit.z(),si->shader ? si->shader.c_str() : "",ti->castShadows);
+			}return false;
 		}
 	}
 
 	/* skip patches when doing the grid (FIXME this is an ugly hack) */
 	if ( inGrid ) {
 		if ( ti->skipGrid ) {
+			
+		if(doMegaDebug){
+			Vector3 wouldhit = trace->origin + trace->direction * depth;
+			printf("triangle is %f %f %f / %f %f %f / %f %f %f\n",tt->v[0].xyz.x(),tt->v[0].xyz.y(),tt->v[0].xyz.z(),tt->v[1].xyz.x(),tt->v[1].xyz.y(),tt->v[1].xyz.z(),tt->v[2].xyz.x(),tt->v[2].xyz.y(),tt->v[2].xyz.z());
+			printf("%s trace from %f %f %f with recvShadows %d HIT (SKIPGRID) at %f %f %f on shader %s with castShadows %d\n", inGrid ? "grid " : "",trace->origin.x(),trace->origin.y(),trace->origin.z(),trace->recvShadows,wouldhit.x(),wouldhit.y(),wouldhit.z(),si->shader ? si->shader.c_str() : "",ti->castShadows);
+		}
 			return false;
 		}
 	}
@@ -1318,6 +1346,10 @@ static bool TraceTriangle( traceInfo_t *ti, traceTriangle_t *tt, trace_t *trace 
 
 	/* the non-culling branch */
 	if ( fabs( det ) < COPLANAR_EPSILON ) {
+		if(doMegaDebug){
+			Vector3 wouldhit = trace->origin + trace->direction * depth;
+		printf("%s trace from %f %f %f with recvShadows %d MISSED (COPLANAR_EPSILON) at %f %f %f on shader %s with castShadows %d\n", inGrid ? "grid " : "",trace->origin.x(),trace->origin.y(),trace->origin.z(),trace->recvShadows,wouldhit.x(),wouldhit.y(),wouldhit.z(),si->shader ? si->shader.c_str() : "",ti->castShadows);
+		}
 		return false;
 	}
 	invDet = 1.0f / det;
@@ -1328,6 +1360,11 @@ static bool TraceTriangle( traceInfo_t *ti, traceTriangle_t *tt, trace_t *trace 
 	/* calculate u parameter and test bounds */
 	u = vector3_dot( tvec, pvec ) * invDet;
 	if ( u < -BARY_EPSILON || u > ( 1.0f + BARY_EPSILON ) ) {
+		if(doMegaDebug){
+			Vector3 wouldhit = trace->origin + trace->direction * depth;
+			printf("triangle is %f %f %f / %f %f %f / %f %f %f\n",tt->v[0].xyz.x(),tt->v[0].xyz.y(),tt->v[0].xyz.z(),tt->v[1].xyz.x(),tt->v[1].xyz.y(),tt->v[1].xyz.z(),tt->v[2].xyz.x(),tt->v[2].xyz.y(),tt->v[2].xyz.z());
+			printf("%s trace from %f %f %f with recvShadows %d MISSED (BARY_EPSILON u) at %f %f %f on shader %s with castShadows %d\n", inGrid ? "grid " : "",trace->origin.x(),trace->origin.y(),trace->origin.z(),trace->recvShadows,wouldhit.x(),wouldhit.y(),wouldhit.z(),si->shader ? si->shader.c_str() : "",ti->castShadows);
+		}
 		return false;
 	}
 
@@ -1337,12 +1374,23 @@ static bool TraceTriangle( traceInfo_t *ti, traceTriangle_t *tt, trace_t *trace 
 	/* calculate v parameter and test bounds */
 	v = vector3_dot( trace->direction, qvec ) * invDet;
 	if ( v < -BARY_EPSILON || ( u + v ) > ( 1.0f + BARY_EPSILON ) ) {
+		
+		if(doMegaDebug){
+			Vector3 wouldhit = trace->origin + trace->direction * depth;
+			printf("triangle is %f %f %f / %f %f %f / %f %f %f\n",tt->v[0].xyz.x(),tt->v[0].xyz.y(),tt->v[0].xyz.z(),tt->v[1].xyz.x(),tt->v[1].xyz.y(),tt->v[1].xyz.z(),tt->v[2].xyz.x(),tt->v[2].xyz.y(),tt->v[2].xyz.z());
+			printf("%s trace from %f %f %f with recvShadows %d MISSED (BARY_EPSILON v) at %f %f %f on shader %s with castShadows %d\n", inGrid ? "grid " : "",trace->origin.x(),trace->origin.y(),trace->origin.z(),trace->recvShadows,wouldhit.x(),wouldhit.y(),wouldhit.z(),si->shader ? si->shader.c_str() : "",ti->castShadows);
+		}
 		return false;
 	}
 
 	/* calculate t (depth) */
 	depth = vector3_dot( tt->edge2, qvec ) * invDet;
 	if ( depth <= trace->inhibitRadius || depth >= trace->distance ) {
+		
+		if(doMegaDebug){
+			Vector3 wouldhit = trace->origin + trace->direction * depth;
+		printf("%s trace from %f %f %f with recvShadows %d MISSED (INHIBIT_RADIUS) at %f %f %f on shader %s with castShadows %d\n", inGrid ? "grid " : "",trace->origin.x(),trace->origin.y(),trace->origin.z(),trace->recvShadows,wouldhit.x(),wouldhit.y(),wouldhit.z(),si->shader ? si->shader.c_str() : "",ti->castShadows);
+		}
 		return false;
 	}
 
@@ -1352,6 +1400,12 @@ static bool TraceTriangle( traceInfo_t *ti, traceTriangle_t *tt, trace_t *trace 
 		for ( i = 0; i < trace->numSurfaces; i++ )
 		{
 			if ( ti->surfaceNum == trace->surfaces[ i ] ) {
+				
+				if(doMegaDebug){
+					Vector3 wouldhit = trace->origin + trace->direction * depth;
+					printf("triangle is %f %f %f / %f %f %f / %f %f %f\n",tt->v[0].xyz.x(),tt->v[0].xyz.y(),tt->v[0].xyz.z(),tt->v[1].xyz.x(),tt->v[1].xyz.y(),tt->v[1].xyz.z(),tt->v[2].xyz.x(),tt->v[2].xyz.y(),tt->v[2].xyz.z());
+					printf("%s trace from %f %f %f with recvShadows %d MISSED (selfshadowing) at %f %f %f on shader %s with castShadows %d\n", inGrid ? "grid " : "",trace->origin.x(),trace->origin.y(),trace->origin.z(),trace->recvShadows,wouldhit.x(),wouldhit.y(),wouldhit.z(),si->shader ? si->shader.c_str() : "",ti->castShadows);
+				}
 				return false;
 			}
 		}
@@ -1365,6 +1419,11 @@ static bool TraceTriangle( traceInfo_t *ti, traceTriangle_t *tt, trace_t *trace 
 		if(multiSun && trace->light && trace->light->environmentLightIndex != -1 && si->environmentEmitterIndex != -1 && si->environmentEmitterIndex < MULTISUN_MAX){
 			bit_enable(trace->skyEnvironmentLightIndices,si->environmentEmitterIndex);
 		}
+		if(doMegaDebug){
+			Vector3 wouldhit = trace->origin + trace->direction * depth;
+			printf("triangle is %f %f %f / %f %f %f / %f %f %f\n",tt->v[0].xyz.x(),tt->v[0].xyz.y(),tt->v[0].xyz.z(),tt->v[1].xyz.x(),tt->v[1].xyz.y(),tt->v[1].xyz.z(),tt->v[2].xyz.x(),tt->v[2].xyz.y(),tt->v[2].xyz.z());
+			printf("%s trace from %f %f %f with recvShadows %d MISSED (trace against sky) at %f %f %f on shader %s with castShadows %d\n", inGrid ? "grid " : "",trace->origin.x(),trace->origin.y(),trace->origin.z(),trace->recvShadows,wouldhit.x(),wouldhit.y(),wouldhit.z(),si->shader ? si->shader.c_str() : "",ti->castShadows);
+		}
 		return false;
 	}
 
@@ -1374,7 +1433,10 @@ static bool TraceTriangle( traceInfo_t *ti, traceTriangle_t *tt, trace_t *trace 
 		trace->hit = trace->origin + trace->direction * depth;
 		trace->color.set( 0 );
 		trace->opaque = true;
-		return true;
+		if(doMegaDebug){
+			printf("%s trace from %f %f %f with recvShadows %d HIT at %f %f %f on shader %s with castShadows %d\n", inGrid ? "grid " : "",trace->origin.x(),trace->origin.y(),trace->origin.z(),trace->recvShadows,trace->hit.x(),trace->hit.y(),trace->hit.z(),si->shader ? si->shader.c_str() : "",ti->castShadows);
+		}
+			return true;
 	}
 
 	/* force subsampling because the lighting is texture dependent */
@@ -1383,6 +1445,11 @@ static bool TraceTriangle( traceInfo_t *ti, traceTriangle_t *tt, trace_t *trace 
 	/* try to avoid double shadows near triangle seams */
 	if ( u < -ASLF_EPSILON || u > ( 1.0f + ASLF_EPSILON ) ||
 	     v < -ASLF_EPSILON || ( u + v ) > ( 1.0f + ASLF_EPSILON ) ) {
+		if(doMegaDebug){
+			Vector3 wouldhit = trace->origin + trace->direction * depth;
+			printf("triangle is %f %f %f / %f %f %f / %f %f %f\n",tt->v[0].xyz.x(),tt->v[0].xyz.y(),tt->v[0].xyz.z(),tt->v[1].xyz.x(),tt->v[1].xyz.y(),tt->v[1].xyz.z(),tt->v[2].xyz.x(),tt->v[2].xyz.y(),tt->v[2].xyz.z());
+			printf("%s trace from %f %f %f with recvShadows %d MISSED (ASLEF_EPSILON) at %f %f %f on shader %s with castShadows %d\n", inGrid ? "grid " : "",trace->origin.x(),trace->origin.y(),trace->origin.z(),trace->recvShadows,wouldhit.x(),wouldhit.y(),wouldhit.z(),si->shader ? si->shader.c_str() : "",ti->castShadows);
+		}
 		return false;
 	}
 
@@ -1418,6 +1485,11 @@ static bool TraceTriangle( traceInfo_t *ti, traceTriangle_t *tt, trace_t *trace 
 		trace->color.set( 0 );
 		trace->hit = trace->origin + trace->direction * depth;
 		trace->opaque = true;
+		if(doMegaDebug){
+			Vector3 wouldhit = trace->origin + trace->direction * depth;
+			printf("triangle is %f %f %f / %f %f %f / %f %f %f\n",tt->v[0].xyz.x(),tt->v[0].xyz.y(),tt->v[0].xyz.z(),tt->v[1].xyz.x(),tt->v[1].xyz.y(),tt->v[1].xyz.z(),tt->v[2].xyz.x(),tt->v[2].xyz.y(),tt->v[2].xyz.z());
+			printf("%s trace from %f %f %f with recvShadows %d HIT (opaque color) at %f %f %f on shader %s with castShadows %d\n", inGrid ? "grid " : "",trace->origin.x(),trace->origin.y(),trace->origin.z(),trace->recvShadows,wouldhit.x(),wouldhit.y(),wouldhit.z(),si->shader ? si->shader.c_str() : "",ti->castShadows);
+		}
 		return true;
 	}
 
