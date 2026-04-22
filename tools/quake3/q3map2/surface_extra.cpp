@@ -371,6 +371,9 @@ void WriteLeafsExtraFile( const char *path ){
 
 		/* shadow behavior */
 		fprintf( lfx, "\tshadowBehaviorSet %d\n", (int)se->shadowBehavior.isSet);
+		fprintf( lfx, "\tneedsTriangleShadowing %d\n", (int)se->shadowBehavior.needsTriangleShadowing);
+		fprintf( lfx, "\tcastShadows %d\n", (int)se->shadowBehavior.castShadows);
+		fprintf( lfx, "\tcastShadowsExclude %d\n", (int)se->shadowBehavior.castShadowsExclude);
 		fprintf( lfx, "\tcastShadowsExcludeBits ( ");
 		for(int j =0;j<NODESHADOW_MAX_BYTES;j++){
 			fprintf( lfx, "%d ", (int)se->shadowBehavior.castShadowsExcludeBits[j] );
@@ -443,10 +446,25 @@ void LoadLeafsExtraFile( const char *path ){
 		}
 		while ( GetToken( true ) && !strEqual( token, "}" ) )
 		{
-			/* recv shadows */
+			/* shadowBehaviorSet */
 			if ( striEqual( token, "shadowBehaviorSet" ) ) {
 				GetToken( false );
 				se->shadowBehavior.isSet = atoi( token );
+			}
+			/* needsTriangleShadowing */
+			if ( striEqual( token, "needsTriangleShadowing" ) ) {
+				GetToken( false );
+				se->shadowBehavior.needsTriangleShadowing = atoi( token );
+			}
+			/* castShadows */
+			if ( striEqual( token, "castShadows" ) ) {
+				GetToken( false );
+				se->shadowBehavior.castShadows = atoi( token );
+			}
+			/* castShadowsExclude */
+			if ( striEqual( token, "castShadowsExclude" ) ) {
+				GetToken( false );
+				se->shadowBehavior.castShadowsExclude = atoi( token );
 			}
 
 			/* castShadowsExcludeBits */

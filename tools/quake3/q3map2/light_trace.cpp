@@ -1322,6 +1322,16 @@ static bool TraceTriangle( traceInfo_t *ti, traceTriangle_t *tt, trace_t *trace 
 			Vector3 wouldhit = trace->origin + trace->direction * depth;
 			printf("%s trace from %f %f %f with recvShadows %d MISSED (castShadows mismatch 3) at %f %f %f on shader %s with castShadows %d\n", inGrid ? "grid " : "",trace->origin.x(),trace->origin.y(),trace->origin.z(),trace->recvShadows,wouldhit.x(),wouldhit.y(),wouldhit.z(),si->shader ? si->shader.c_str() : "",ti->castShadows);
 			}return false;
+		}else if(ti->castShadowsExclude && abs(trace->recvShadows) == abs(ti->castShadowsExclude) || trace->recvShadows == 1 && ti->castShadowsExclude > 0){
+			if(doMegaDebug){
+			Vector3 wouldhit = trace->origin + trace->direction * depth;
+			printf("%s trace from %f %f %f with recvShadows %d MISSED (castShadows mismatch 4) at %f %f %f on shader %s with castShadows %d\n", inGrid ? "grid " : "",trace->origin.x(),trace->origin.y(),trace->origin.z(),trace->recvShadows,wouldhit.x(),wouldhit.y(),wouldhit.z(),si->shader ? si->shader.c_str() : "",ti->castShadows);
+			}return false;
+		} else if(trace->recvShadowsExclude && abs(trace->recvShadowsExclude) == abs(ti->castShadows) || trace->recvShadowsExclude > 0 && ti->castShadows == 1){
+			if(doMegaDebug){
+			Vector3 wouldhit = trace->origin + trace->direction * depth;
+			printf("%s trace from %f %f %f with recvShadows %d MISSED (castShadows mismatch 5) at %f %f %f on shader %s with castShadows %d\n", inGrid ? "grid " : "",trace->origin.x(),trace->origin.y(),trace->origin.z(),trace->recvShadows,wouldhit.x(),wouldhit.y(),wouldhit.z(),si->shader ? si->shader.c_str() : "",ti->castShadows);
+			}return false;
 		}
 	}
 
@@ -1580,47 +1590,39 @@ static bool TraceLine_r( int nodeNum, const Vector3& origin, const Vector3& end,
 			// dumb hack: check for shadow behavior
 			if(node->shadowBehavior.isSet){
 				
+				if(node->shadowBehavior.needsTriangleShadowing)
+				{
+					blocksLight = false;
+				}
+
 				// A leaf can end up with the properties of many brushes
 				// Therefore we can't reliably use the normal _receiveShadows or _castShadows stuff
 				// but we can kinda say ok we wanna exclude shadows from any leaf that has a caster with a specific number
-
-				if(trace->recvShadows > 0 && trace->recvShadows <= NODESHADOW_MAX_VALUE && bit_is_enabled(node->shadowBehavior.castShadowsExcludeBits,trace->recvShadows) ){
-					blocksLight = false;
-				} else if(trace->recvShadowsExclude > 0 && trace->recvShadowsExclude <= NODESHADOW_MAX_VALUE && bit_is_enabled(node->shadowBehavior.castShadowsBits,trace->recvShadowsExclude) ){
-					blocksLight = false;
-				}
-				/*
-				// worldspawn group only receives shadows from positive groups 
-				if(trace->recvShadows == 1){
-					bool anyBitSet = false;
-					for(int i = 0; i<NODESHADOW_MAX_BYTES;i++){
-						if(node->shadowBehavior.castShadowsBits[i]){
-							anyBitSet = true;
-						}
-					}
-					if ( !anyBitSet ) {
+				else if ( trace->recvShadows == 1 ) {
+					if ( node->shadowBehavior.castShadows <= 0 ) {
 						blocksLight = false;
 					}
 				}
-				// receive shadows from same group and worldspawn group 
+				/* receive shadows from same group and worldspawn group */
 				else if ( trace->recvShadows > 1 ) {
-					if ( !bit_is_enabled(node->shadowBehavior.castShadowsBits,1)  &&
-						trace->recvShadows <= NODESHADOW_MAX_VALUE 
-						&& !bit_is_enabled(node->shadowBehavior.castShadowsBits,trace->recvShadows) 
-						&& !bit_is_enabled(node->shadowBehavior.castShadowsNegativeBits,trace->recvShadows)) {
+					if ( node->shadowBehavior.castShadows != 1 && abs( node->shadowBehavior.castShadows ) != abs( trace->recvShadows ) ) {
+						
 						blocksLight = false;
 					}
 					//%	Sys_Printf( "%d:%d ", tt->castShadows, trace->recvShadows );
 				}
-				// receive shadows from the same group only (< 0) 
+				/* receive shadows from the same group only (< 0) */
 				else
 				{
-					if ( trace->recvShadows <= NODESHADOW_MAX_VALUE 
-						&& !bit_is_enabled(node->shadowBehavior.castShadowsBits,trace->recvShadows) 
-						&& !bit_is_enabled(node->shadowBehavior.castShadowsNegativeBits,trace->recvShadows) ) {
+					if ( abs( node->shadowBehavior.castShadows ) != abs( trace->recvShadows ) ) {
+						blocksLight = false;
+					} else if(node->shadowBehavior.castShadowsExclude && abs(trace->recvShadows) == abs(node->shadowBehavior.castShadowsExclude) || trace->recvShadows == 1 && node->shadowBehavior.castShadowsExclude > 0){
+						blocksLight = false;
+					} else if(trace->recvShadowsExclude && abs(trace->recvShadowsExclude) == abs(node->shadowBehavior.castShadows) || trace->recvShadowsExclude > 0 && node->shadowBehavior.castShadows == 1){
 						blocksLight = false;
 					}
-				}*/
+				}
+
 			}
 
 			if(blocksLight){

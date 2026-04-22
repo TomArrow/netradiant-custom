@@ -270,10 +270,12 @@ struct bspNode_t
 #define NODESHADOW_MAX_BYTES ((NODESHADOW_MAX_NUM+7)/8)
 struct nodeShadowBehavior_t {
 	qboolean	isSet;
+	qboolean	needsTriangleShadowing; // if any of the below have more than 1 bit set.
 	byte castShadowsBits[NODESHADOW_MAX_BYTES];
 	byte castShadowsNegativeBits[NODESHADOW_MAX_BYTES];
 	byte castShadowsExcludeBits[NODESHADOW_MAX_BYTES];
 	byte castShadowsExcludeNegativeBits[NODESHADOW_MAX_BYTES];
+	int castShadows, castShadowsExclude;
 };
 
 struct bspLeaf_t
@@ -1629,6 +1631,7 @@ void                        WriteBSPBrushMap( const char *name, const brushlist_
 
 void                        FilterDetailBrushesIntoTree( const entity_t& e, tree_t& tree );
 void                        FilterStructuralBrushesIntoTree( const entity_t& e, tree_t& tree );
+void 						CheckNodeShadowBehaviors( node_t* node );
 
 bool                        WindingIsTiny( const winding_t& w );
 

@@ -142,7 +142,9 @@ static void EmitLeaf( node_t *node ){
 	/* emit leaf surfaces */
 	if ( node->opaque ) {
 		leafExtraInfo.shadowBehavior = node->shadowBehavior;
-		//return;
+		if(!node->shadowBehavior.needsTriangleShadowing){
+			return;
+		}
 	}
 
 	/* add the drawSurfRef_t drawsurfs */

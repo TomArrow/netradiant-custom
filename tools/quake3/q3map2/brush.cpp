@@ -30,7 +30,7 @@
 
 /* dependencies */
 #include "q3map2.h"
-
+#include <bitset>
 
 
 /* -------------------------------------------------------------------------------
@@ -459,16 +459,18 @@ static int FilterBrushIntoTree_r( brush_t&& b, node_t *node ){
 				
 				node->shadowBehavior.isSet = true;
 
-				// dumb hack: allow opaque leafs to somewhat respect the recvShadows/castShadows stuff
-				if(b.castShadowsExclude < 0 && b.castShadowsExclude >= -NODESHADOW_MAX_VALUE){
-					bit_enable(node->shadowBehavior.castShadowsExcludeNegativeBits,-b.recvShadows);
-				} else if(b.castShadowsExclude > 0 && b.castShadowsExclude <= NODESHADOW_MAX_VALUE){
-					bit_enable(node->shadowBehavior.castShadowsExcludeBits,b.recvShadows);
-				}
-				if(b.castShadows < 0 && b.castShadows >= -NODESHADOW_MAX_VALUE){
-					bit_enable(node->shadowBehavior.castShadowsNegativeBits,-b.castShadows);
-				} else if(b.castShadows > 0 && b.castShadows <= NODESHADOW_MAX_VALUE){
-					bit_enable(node->shadowBehavior.castShadowsBits,b.castShadows);
+				if(!b.detail){
+					// dumb hack: allow opaque leafs to somewhat respect the recvShadows/castShadows stuff
+					if(b.castShadowsExclude < 0 && b.castShadowsExclude >= -NODESHADOW_MAX_VALUE){
+						bit_enable(node->shadowBehavior.castShadowsExcludeNegativeBits,-b.recvShadows);
+					} else if(b.castShadowsExclude > 0 && b.castShadowsExclude <= NODESHADOW_MAX_VALUE){
+						bit_enable(node->shadowBehavior.castShadowsExcludeBits,b.recvShadows);
+					}
+					if(b.castShadows < 0 && b.castShadows >= -NODESHADOW_MAX_VALUE){
+						bit_enable(node->shadowBehavior.castShadowsNegativeBits,-b.castShadows);
+					} else if(b.castShadows > 0 && b.castShadows <= NODESHADOW_MAX_VALUE){
+						bit_enable(node->shadowBehavior.castShadowsBits,b.castShadows);
+					}
 				}
 			}
 			else if ( b.compileFlags & C_AREAPORTAL ) {
@@ -516,6 +518,53 @@ void FilterDetailBrushesIntoTree( const entity_t& e, tree_t& tree ){
 	/* emit some statistics */
 	Sys_FPrintf( SYS_VRB, "%9d detail brushes\n", c_unique );
 	Sys_FPrintf( SYS_VRB, "%9d cluster references\n", c_clusters );
+}
+
+void CheckNodeShadowBehaviors( node_t* node ){
+	if(!node){
+		return;
+	}
+	if(node->planenum == PLANENUM_LEAF){
+		int bitcounts[2] = {0,0};
+		for(int i =0;i<NODESHADOW_MAX_BYTES;i++){
+			bitcounts[0] += std::bitset<8>(node->shadowBehavior.castShadowsBits[i]).count();
+			bitcounts[0] += std::bitset<8>(node->shadowBehavior.castShadowsNegativeBits[i]).count();
+			bitcounts[1] += std::bitset<8>(node->shadowBehavior.castShadowsExcludeBits[i]).count();
+			bitcounts[1] += std::bitset<8>(node->shadowBehavior.castShadowsExcludeNegativeBits[i]).count();
+		}
+		if(bitcounts[0] > 1 || bitcounts[1] > 1){
+			node->shadowBehavior.needsTriangleShadowing = true;
+		} else{
+			node->shadowBehavior.needsTriangleShadowing = false;
+			for(int i=1;i<NODESHADOW_MAX_NUM;i++){
+				if(bit_is_enabled(node->shadowBehavior.castShadowsBits,i)){
+					node->shadowBehavior.castShadows = i;
+					break;
+				}
+				if(bit_is_enabled(node->shadowBehavior.castShadowsNegativeBits,i)){
+					node->shadowBehavior.castShadows = -i;
+					break;
+				}
+			}
+			for(int i=1;i<NODESHADOW_MAX_NUM;i++){
+				if(bit_is_enabled(node->shadowBehavior.castShadowsExcludeBits,i)){
+					node->shadowBehavior.castShadowsExclude = i;
+					break;
+				}
+				if(bit_is_enabled(node->shadowBehavior.castShadowsExcludeNegativeBits,i)){
+					node->shadowBehavior.castShadowsExclude = -i;
+					break;
+				}
+			}
+			if(node->shadowBehavior.castShadows != 1 || node->shadowBehavior.castShadowsExclude != 0){
+				// dumb and annoying but I can't figure out how to make it work without this
+				node->shadowBehavior.needsTriangleShadowing = true;
+			}
+		}
+		return;
+	}
+	CheckNodeShadowBehaviors(node->children[0]);
+	CheckNodeShadowBehaviors(node->children[1]);
 }
 
 /*

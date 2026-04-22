@@ -1283,9 +1283,9 @@ static void ClipSideIntoTree_r( const winding_t& w, side_t& side, const node_t *
 	}
 
 	// if opaque leaf, don't add
-	//if ( !node->opaque ) {
+	if ( !node->opaque || node->shadowBehavior.needsTriangleShadowing ) {
 		AddWindingToConvexHull( w, side.visibleHull, mapplanes[ side.planenum ].normal() );
-	//}
+	}
 }
 
 
@@ -1607,7 +1607,7 @@ static int AddReferenceToLeaf( mapDrawSurface_t *ds, node_t *node ){
 
 
 	/* dummy check */
-	if ( node->planenum != PLANENUM_LEAF  ) { // || node->opaque
+	if ( node->planenum != PLANENUM_LEAF || node->opaque && !node->shadowBehavior.needsTriangleShadowing  ) {
 		return 0;
 	}
 

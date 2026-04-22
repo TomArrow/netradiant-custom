@@ -300,6 +300,10 @@ static void ProcessWorldModel( entity_t& e ){
 	MakeTreePortals( tree );
 	FilterStructuralBrushesIntoTree( e, tree );
 
+	/* Check nodes for whether they have one or multiple receive/cast shadow numbers, so we know if */
+	/* we use the node itself for opaque-shadow casting or need to fallback to triangle-shadowcasting  */
+	CheckNodeShadowBehaviors( tree.headnode );
+
 	/* see if the bsp is completely enclosed */
 	EFloodEntities leakStatus = FloodEntities( tree );
 	if ( ignoreLeaks && leakStatus == EFloodEntities::Leaked ) {
@@ -328,6 +332,10 @@ static void ProcessWorldModel( entity_t& e ){
 		tree = FaceBSP( faces );
 		MakeTreePortals( tree );
 		FilterStructuralBrushesIntoTree( e, tree );
+		
+		/* Check nodes for whether they have one or multiple receive/cast shadow numbers, so we know if */
+		/* we use the node itself for opaque-shadow casting or need to fallback to triangle-shadowcasting  */
+		CheckNodeShadowBehaviors( tree.headnode );
 
 		if( g_autocaulk ){
 			autocaulk_write();
