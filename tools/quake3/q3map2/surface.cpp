@@ -1252,18 +1252,18 @@ void SubdivideFaceSurfaces( const entity_t& e ){
    ====================
  */
 
-static void ClipSideIntoTree_r( const winding_t& w, side_t& side, const node_t *node ){
+static void ClipSideIntoTree_r( const winding_t& w, side_t& side, brush_t& brush, const node_t *node ){
 	if ( w.empty() ) {
 		return;
 	}
 
 	if ( node->planenum != PLANENUM_LEAF ) {
 		if ( side.planenum == node->planenum ) {
-			ClipSideIntoTree_r( w, side, node->children[0] );
+			ClipSideIntoTree_r( w, side, brush, node->children[0] );
 			return;
 		}
 		if ( side.planenum == ( node->planenum ^ 1 ) ) {
-			ClipSideIntoTree_r( w, side, node->children[1] );
+			ClipSideIntoTree_r( w, side, brush, node->children[1] );
 			return;
 		}
 
@@ -1271,19 +1271,19 @@ static void ClipSideIntoTree_r( const winding_t& w, side_t& side, const node_t *
 		auto [front, back] = ClipWindingEpsilonStrict( w, plane, ON_EPSILON ); /* strict, we handle the "winding disappeared" case */
 		if ( front.empty() && back.empty() ) {
 			/* in doubt, register it in both nodes */
-			ClipSideIntoTree_r( w, side, node->children[0] );
-			ClipSideIntoTree_r( w, side, node->children[1] );
+			ClipSideIntoTree_r( w, side, brush, node->children[0] );
+			ClipSideIntoTree_r( w, side, brush, node->children[1] );
 		}
 		else{
-			ClipSideIntoTree_r( front, side, node->children[0] );
-			ClipSideIntoTree_r( back, side, node->children[1] );
+			ClipSideIntoTree_r( front, side, brush, node->children[0] );
+			ClipSideIntoTree_r( back, side, brush, node->children[1] );
 		}
 
 		return;
 	}
 
 	// if opaque leaf, don't add
-	if ( !node->opaque || node->shadowBehavior.needsTriangleShadowing ) {
+	if ( !node->opaque || node->shadowBehavior.needsTriangleShadowing || brush.castShadows && (node->shadowBehavior.castShadows != brush.castShadows || node->shadowBehavior.castShadowsExclude != brush.castShadowsExclude)) {
 		AddWindingToConvexHull( w, side.visibleHull, mapplanes[ side.planenum ].normal() );
 	}
 }
@@ -1548,7 +1548,7 @@ void ClipSidesIntoTree( entity_t& e, const tree_t& tree ){
 			}
 
 			side.visibleHull.clear();
-			ClipSideIntoTree_r( side.winding, side, tree.headnode );
+			ClipSideIntoTree_r( side.winding, side, b, tree.headnode );
 
 			/* anything left? */
 			if ( side.visibleHull.empty() ) {

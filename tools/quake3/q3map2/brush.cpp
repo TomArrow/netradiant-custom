@@ -556,10 +556,10 @@ void CheckNodeShadowBehaviors( node_t* node ){
 					break;
 				}
 			}
-			if(node->shadowBehavior.castShadows != 1 || node->shadowBehavior.castShadowsExclude != 0){
+			//if(node->shadowBehavior.castShadows != 1 || node->shadowBehavior.castShadowsExclude != 0){
 				// dumb and annoying but I can't figure out how to make it work without this
-				node->shadowBehavior.needsTriangleShadowing = true;
-			}
+				//node->shadowBehavior.needsTriangleShadowing = true;
+			//}
 		}
 		return;
 	}
