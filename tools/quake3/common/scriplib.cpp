@@ -324,6 +324,7 @@ void Parse1DMatrix( int x, T *m ) {
 
 	MatchToken( ")" );
 }
+template void Parse1DMatrix<byte>( int x, byte *m );
 template void Parse1DMatrix<float>( int x, float *m );
 template void Parse1DMatrix<double>( int x, double *m );
 
