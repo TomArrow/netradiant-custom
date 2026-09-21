@@ -2098,6 +2098,8 @@ inline bool cpmaHack;
 inline bool hdr = false;
 inline bool hdrLightmapInverseSrgb = false;
 
+inline bool sunFermat = true;
+
 inline float tessSize = 0.0f;
 
 inline bool deluxemap;

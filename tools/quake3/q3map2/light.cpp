@@ -29,11 +29,31 @@
 
 
 /* dependencies */
+#define _USE_MATH_DEFINES
 #include "q3map2.h"
 #include "bspfile_rbsp.h"
 #include <set>
 
+const double goldenangle = M_PI * (3.0f - sqrtf(5.0f));
+// vogel style fermat spiral with a slight non-scientific modification for index 0
+static void SunDirJitter(double &da, double &de, double desiredradius, int index, int samples) {
+	if (samples <= 1) {
+		return;
+	}
+	int iters = samples;
+	int i = index;
 
+	double c = 1.0f / sqrt((double)iters - 1.0f); // total scaling factor to achieve desired radius based on total frames
+	double r = c * sqrt((double)i) * desiredradius; // actual distance from center
+	double ang = goldenangle * (double)i;
+	da += sin(ang) * r;
+	if (i == 0) {
+		de += c * 0.8f * desiredradius; // 0 gets special treatment, else it ends up in an ugly spot
+	}
+	else {
+		de += cosf(ang) * r;
+	}
+}
 
 /*
    CreateSunLight() - ydnar
@@ -71,16 +91,21 @@ static void CreateSunLight( sun_t& sun ){
 			double angle = atan2( sun.direction[ 1 ], sun.direction[ 0 ] );
 			double elevation = atan2( sun.direction[ 2 ], d );
 
-			/* jitter the angles (loop to keep random sample within sun.deviance steridians) */
-			float da, de;
-			do
-			{
-				da = ( Random() * 2.0f - 1.0f ) * sun.deviance;
-				de = ( Random() * 2.0f - 1.0f ) * sun.deviance;
+			if(sunFermat){
+				/* use fermat spiral with the Vogel sunflower formula for an even looking spread  */
+				SunDirJitter(angle,elevation,sun.deviance,i,sun.numSamples);
+			} else {
+				/* jitter the angles (loop to keep random sample within sun.deviance steridians) */
+				float da, de;
+				do
+				{
+					da = ( Random() * 2.0f - 1.0f ) * sun.deviance;
+					de = ( Random() * 2.0f - 1.0f ) * sun.deviance;
+				}
+				while ( ( da * da + de * de ) > ( sun.deviance * sun.deviance ) );
+				angle += da;
+				elevation += de;
 			}
-			while ( ( da * da + de * de ) > ( sun.deviance * sun.deviance ) );
-			angle += da;
-			elevation += de;
 
 			/* debug code */
 			//%	Sys_Printf( "%d: Angle: %3.4lf Elevation: %3.3lf\n", sun.numSamples, radians_to_degrees( angle ), radians_to_degrees( elevation ) );
@@ -2614,6 +2639,10 @@ int LightMain( Args& args ){
 		while ( args.takeArg( "-hdr" ) ) {
 			hdr = true;
 			Sys_Printf("Storing hdr lightmaps externally\n");
+		}
+		while ( args.takeArg( "-noSunFermat" ) ) {
+			sunFermat = false;
+			Sys_Printf("Disabling fermat spiral for sun deviance\n");
 		}
 		while ( args.takeArg( "-tessSize" ) ) {
 			tessSize = atof(args.takeNext());
