@@ -3135,11 +3135,11 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 				if (hdr)
 				{
 					/* write HDR lightmap */
-					sprintf(filename, "%s/" EXTERNAL_HDR_LIGHTMAP, dirname, numExtLightmaps);
+					sprintf(filename, EXTERNAL_HDR_LIGHTMAP(3), dirname, numExtLightmaps);
 					Sys_FPrintf(SYS_VRB, "\nwriting %s", filename);
 
 					//stbi_flip_vertically_on_write(1);
-#if HDR_EXR
+#if HDR_EXR >= 3
 					int exportStatus = WriteEXR(filename, olm->customWidth, olm->customHeight, 4, olm->bspLightFloats);
 #else 
 					int exportStatus = stbi_write_hdr(filename, olm->customWidth, olm->customHeight, 4, olm->bspLightFloats);
@@ -3157,18 +3157,18 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 					if (hdr)
 					{
 						/* write HDR lightmap */
-						sprintf(filename, "%s/" EXTERNAL_HDR_LIGHTMAP, dirname, numExtLightmaps);
+						sprintf(filename, EXTERNAL_HDR_LIGHTMAP(2), dirname, numExtLightmaps);
 						Sys_FPrintf(SYS_VRB, "\nwriting %s", filename);
 
 						//stbi_flip_vertically_on_write(1);
-#if HDR_EXR
+#if HDR_EXR >= 2
 						int exportStatus = WriteEXR(filename, olm->customWidth, olm->customHeight, 4, olm->bspDeLightFloats);
 #else 
 						int exportStatus = stbi_write_hdr(filename, olm->customWidth, olm->customHeight, 4, olm->bspDeLightFloats);
 #endif
 
 						/* write HDR lightmap */
-						sprintf(filename, "%s/" EXTERNAL_HDR_LIGHTMAP_DIST, dirname, numExtLightmaps);
+						sprintf(filename, EXTERNAL_HDR_LIGHTMAP_DIST(1), dirname, numExtLightmaps);
 						Sys_FPrintf(SYS_VRB, "\nwriting %s", filename);
 
 						//stbi_flip_vertically_on_write(1);

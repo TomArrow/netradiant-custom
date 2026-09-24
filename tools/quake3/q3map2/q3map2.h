@@ -37,7 +37,7 @@
 #define Q3MAP_MOTD      "Your map saw the pretty lights from q3map2's BFG"
 
 
-#define HDR_EXR 1
+#define HDR_EXR 1 // 1 = use exr for _dist extradata (most important cuz shared exponent with RGBE ruins data), 2 = use it for normals too, 3 = use it for lightmaps too
 
 
 /* -------------------------------------------------------------------------------
@@ -185,13 +185,8 @@ enum class EBrushType
    ------------------------------------------------------------------------------- */
 
 #define EXTERNAL_LIGHTMAP       "lm_%04d.tga"
-#if HDR_EXR
-#define EXTERNAL_HDR_LIGHTMAP	"lm_%04d.exr"
-#define EXTERNAL_HDR_LIGHTMAP_DIST	"lm_%04d_dist.exr"
-#else
-#define EXTERNAL_HDR_LIGHTMAP	"lm_%04d.hdr"
-#define EXTERNAL_HDR_LIGHTMAP_DIST	"lm_%04d_dist.hdr"
-#endif
+#define EXTERNAL_HDR_LIGHTMAP(level) ( HDR_EXR >= (level) ? "%s/lm_%04d.exr" : "%s/lm_%04d.hdr")
+#define EXTERNAL_HDR_LIGHTMAP_DIST(level) ( HDR_EXR >= (level) ? "%s/lm_%04d_dist.exr" : "%s/lm_%04d_dist.hdr")
 #define EXTERNAL_HDR_LIGHTGRID	"lightgrid.raw"
 #define EXTERNAL_HDR_VERTCOLORS	"vertlightDeluxe.raw"
 #define EXTERNAL_MULTISTYLE_SURFACES	"manyStyleSurfaces.raw"
