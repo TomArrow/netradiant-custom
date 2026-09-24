@@ -728,6 +728,185 @@ inline double vector4_dot( const BasicVector4<Element>& self, const BasicVector4
 }
 
 template<typename Element>
+inline BasicVector4<Element> vector4_mid( const BasicVector4<Element>& begin, const BasicVector4<Element>& end ){
+	return vector4_scaled( vector4_added( begin, end ), 0.5 );
+}
+
+template<typename Element>
 inline BasicVector3<Element> vector4_projected( const BasicVector4<Element>& self ){
 	return vector3_scaled( vector4_to_vector3( self ), 1.0 / self[3] );
+}
+
+
+
+
+
+
+
+
+template<typename Element, typename OtherElement>
+inline bool vector5_equal( const BasicVector5<Element>& self, const BasicVector5<OtherElement>& other ){
+	return self.x() == other.x() && self.y() == other.y() && self.z() == other.z() && self.w() == other.w() && self.v() == other.v();
+}
+template<typename Element, typename OtherElement>
+inline bool operator==( const BasicVector5<Element>& self, const BasicVector5<OtherElement>& other ){
+	return vector5_equal( self, other );
+}
+template<typename Element, typename OtherElement>
+inline bool operator!=( const BasicVector5<Element>& self, const BasicVector5<OtherElement>& other ){
+	return !vector5_equal( self, other );
+}
+
+template<typename Element, typename OtherElement>
+inline bool vector5_equal_epsilon( const BasicVector5<Element>& self, const BasicVector5<OtherElement>& other, Element epsilon ){
+	return float_equal_epsilon( self.x(), other.x(), epsilon )
+	    && float_equal_epsilon( self.y(), other.y(), epsilon )
+	    && float_equal_epsilon( self.z(), other.z(), epsilon )
+	    && float_equal_epsilon( self.w(), other.w(), epsilon )
+	    && float_equal_epsilon( self.v(), other.v(), epsilon );
+}
+
+template<typename Element, typename OtherElement>
+inline BasicVector5<Element> vector5_added( const BasicVector5<Element>& self, const BasicVector5<OtherElement>& other ){
+	return BasicVector5<Element>(
+	           float( self.x() + other.x() ),
+	           float( self.y() + other.y() ),
+	           float( self.z() + other.z() ),
+	           float( self.w() + other.w() ),
+	           float( self.v() + other.v() )
+	       );
+}
+template<typename Element, typename OtherElement>
+inline BasicVector5<Element> operator+( const BasicVector5<Element>& self, const BasicVector5<OtherElement>& other ){
+	return vector5_added( self, other );
+}
+template<typename Element, typename OtherElement>
+inline void vector5_add( BasicVector5<Element>& self, const BasicVector5<OtherElement>& other ){
+	self.x() += static_cast<float>( other.x() );
+	self.y() += static_cast<float>( other.y() );
+	self.z() += static_cast<float>( other.z() );
+	self.w() += static_cast<float>( other.w() );
+	self.v() += static_cast<float>( other.v() );
+}
+template<typename Element, typename OtherElement>
+inline void operator+=( BasicVector5<Element>& self, const BasicVector5<OtherElement>& other ){
+	vector5_add( self, other );
+}
+
+template<typename Element, typename OtherElement>
+inline BasicVector5<Element> vector5_subtracted( const BasicVector5<Element>& self, const BasicVector5<OtherElement>& other ){
+	return BasicVector5<Element>(
+	           float( self.x() - other.x() ),
+	           float( self.y() - other.y() ),
+	           float( self.z() - other.z() ),
+	           float( self.w() - other.w() ),
+	           float( self.v() - other.v() )
+	       );
+}
+template<typename Element, typename OtherElement>
+inline BasicVector5<Element> operator-( const BasicVector5<Element>& self, const BasicVector5<OtherElement>& other ){
+	return vector5_subtracted( self, other );
+}
+template<typename Element, typename OtherElement>
+inline void vector5_subtract( BasicVector5<Element>& self, const BasicVector5<OtherElement>& other ){
+	self.x() -= static_cast<float>( other.x() );
+	self.y() -= static_cast<float>( other.y() );
+	self.z() -= static_cast<float>( other.z() );
+	self.w() -= static_cast<float>( other.w() );
+	self.v() -= static_cast<float>( other.v() );
+}
+template<typename Element, typename OtherElement>
+inline void operator-=( BasicVector5<Element>& self, const BasicVector5<OtherElement>& other ){
+	vector5_subtract( self, other );
+}
+
+template<typename Element, typename OtherElement>
+inline BasicVector5<Element> vector5_scaled( const BasicVector5<Element>& self, const BasicVector5<OtherElement>& other ){
+	return BasicVector5<Element>(
+	           float( self.x() * other.x() ),
+	           float( self.y() * other.y() ),
+	           float( self.z() * other.z() ),
+	           float( self.w() * other.w() ),
+	           float( self.v() * other.v() )
+	       );
+}
+template<typename Element, typename OtherElement>
+inline BasicVector5<Element> operator*( const BasicVector5<Element>& self, const BasicVector5<OtherElement>& other ){
+	return vector5_scaled( self, other );
+}
+template<typename Element, typename OtherElement>
+inline void vector5_scale( BasicVector5<Element>& self, const BasicVector5<OtherElement>& other ){
+	self.x() *= static_cast<float>( other.x() );
+	self.y() *= static_cast<float>( other.y() );
+	self.z() *= static_cast<float>( other.z() );
+	self.w() *= static_cast<float>( other.w() );
+	self.v() *= static_cast<float>( other.v() );
+}
+template<typename Element, typename OtherElement>
+inline void operator*=( BasicVector5<Element>& self, const BasicVector5<OtherElement>& other ){
+	vector5_scale( self, other );
+}
+
+template<typename Element, typename OtherElement>
+inline BasicVector5<Element> vector5_scaled( const BasicVector5<Element>& self, OtherElement scale ){
+	return BasicVector5<Element>(
+	           float( self.x() * scale ),
+	           float( self.y() * scale ),
+	           float( self.z() * scale ),
+	           float( self.w() * scale ),
+	           float( self.v() * scale )
+	       );
+}
+template<typename Element, typename OtherElement>
+inline BasicVector5<Element> operator*( const BasicVector5<Element>& self, OtherElement scale ){
+	return vector5_scaled( self, scale );
+}
+template<typename Element, typename OtherElement>
+inline void vector5_scale( BasicVector5<Element>& self, OtherElement scale ){
+	self.x() *= static_cast<float>( scale );
+	self.y() *= static_cast<float>( scale );
+	self.z() *= static_cast<float>( scale );
+	self.w() *= static_cast<float>( scale );
+	self.v() *= static_cast<float>( scale );
+}
+template<typename Element, typename OtherElement>
+inline void operator*=( BasicVector5<Element>& self, OtherElement scale ){
+	vector5_scale( self, scale );
+}
+
+template<typename Element, typename OtherElement>
+inline BasicVector5<Element> vector5_divided( const BasicVector5<Element>& self, OtherElement divisor ){
+	return BasicVector5<Element>(
+	           float( self.x() / divisor ),
+	           float( self.y() / divisor ),
+	           float( self.z() / divisor ),
+	           float( self.w() / divisor ),
+	           float( self.v() / divisor )
+	       );
+}
+template<typename Element, typename OtherElement>
+inline BasicVector5<Element> operator/( const BasicVector5<Element>& self, OtherElement divisor ){
+	return vector5_divided( self, divisor );
+}
+template<typename Element, typename OtherElement>
+inline void vector5_divide( BasicVector5<Element>& self, OtherElement divisor ){
+	self.x() /= divisor;
+	self.y() /= divisor;
+	self.z() /= divisor;
+	self.w() /= divisor;
+	self.v() /= divisor;
+}
+template<typename Element, typename OtherElement>
+inline void operator/=( BasicVector5<Element>& self, OtherElement divisor ){
+	vector5_divide( self, divisor );
+}
+
+template<typename Element, typename OtherElement>
+inline double vector5_dot( const BasicVector5<Element>& self, const BasicVector5<OtherElement>& other ){
+	return self.x() * other.x() + self.y() * other.y() + self.z() * other.z() + self.w() * other.w() + self.v() * other.v();
+}
+
+template<typename Element>
+inline BasicVector5<Element> vector5_mid( const BasicVector5<Element>& begin, const BasicVector5<Element>& end ){
+	return vector5_scaled( vector5_added( begin, end ), 0.5 );
 }

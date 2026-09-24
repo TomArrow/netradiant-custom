@@ -1142,12 +1142,14 @@ int LightContributionToSample( trace_t *trace ){
 
 		addDeluxe *= colorBrightness;
 
-		if ( bouncing ) {
+		if ( bouncing ) { // wait... why?
 			addDeluxe *= addDeluxeBounceScale;
 			value_maximize( addDeluxe, 0.00390625f );
 		}
 
-		trace->directionContribution = trace->direction * addDeluxe;
+		trace->directionContribution.vec3() = trace->direction * addDeluxe;
+		trace->directionContribution.w() = trace->distance * addDeluxe;
+		trace->directionContribution.v() = addDeluxe;
 
 		/* setup trace */
 		trace->testAll = true;
@@ -1201,7 +1203,9 @@ int LightContributionToSample( trace_t *trace ){
 	}
 
 	if ( doAddDeluxe ) {
-		trace->directionContribution = trace->direction * addDeluxe;
+		trace->directionContribution.vec3() = trace->direction * addDeluxe;
+		trace->directionContribution.w() = trace->distance * addDeluxe;
+		trace->directionContribution.v() = addDeluxe;
 	}
 
 	/* setup trace */
@@ -1229,7 +1233,7 @@ int LightContributionToSample( trace_t *trace ){
    determines the amount of light reaching a sample (luxel or vertex)
  */
 
-void LightingAtSample( trace_t *trace, byte styles[ MAX_LIGHTMAPS ], Vector3 (&colors)[ MAX_LIGHTMAPS ], Vector3 (&dirs)[ MAX_LIGHTMAPS ] ){
+void LightingAtSample( trace_t *trace, byte styles[ MAX_LIGHTMAPS ], Vector3 (&colors)[ MAX_LIGHTMAPS ], Vector5 (&dirs)[ MAX_LIGHTMAPS ] ){
 	int i, lightmapNum;
 
 

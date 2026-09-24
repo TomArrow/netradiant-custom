@@ -1997,14 +1997,15 @@ static bool SubmapRawLuxel( const rawLightmap_t *lm, int x, int y, float bx, flo
    recursively subsamples a luxel until its color gradient is low enough or subsampling limit is reached
  */
 
-static void SubsampleRawLuxel_r( rawLightmap_t *lm, trace_t *trace, const Vector3& sampleOrigin, int x, int y, float bias, SuperLuxel& lightLuxel, Vector3 *lightDeluxel ){
+static void SubsampleRawLuxel_r( rawLightmap_t *lm, trace_t *trace, const Vector3& sampleOrigin, int x, int y, float bias, SuperLuxel& lightLuxel, Vector5 *lightDeluxel ){
 	int b, samples, mapped, lighted;
 	int cluster[ 4 ];
 	SuperLuxel luxel[ 4 ];
-	Vector3 deluxel[ 4 ];
+	Vector5 deluxel[ 4 ];
 	Vector3 origin[ 4 ], normal[ 4 ];
 	float biasDirs[ 4 ][ 2 ] = { { -1.0f, -1.0f }, { 1.0f, -1.0f }, { -1.0f, 1.0f }, { 1.0f, 1.0f } };
-	Vector3 color, direction( 0 ), total( 0 );
+	Vector3 color, total( 0 );
+	Vector5 direction(0);
 
 
 	/* limit check */
@@ -2119,11 +2120,12 @@ static void GaussLikeRandom( float sigma, float *x, float *y ){
 	*x *= r;
 	*y *= r;
 }
-static void RandomSubsampleRawLuxel( rawLightmap_t *lm, trace_t *trace, const Vector3& sampleOrigin, int x, int y, float bias, SuperLuxel& lightLuxel, Vector3 *lightDeluxel ){
+static void RandomSubsampleRawLuxel( rawLightmap_t *lm, trace_t *trace, const Vector3& sampleOrigin, int x, int y, float bias, SuperLuxel& lightLuxel, Vector5 *lightDeluxel ){
 	int b, mapped = 0;
 	int cluster;
 	Vector3 origin, normal;
-	Vector3 total( 0 ), totaldirection( 0 );
+	Vector3 total( 0 );
+	Vector5 totaldirection( 0 );
 	float dx, dy;
 
 	for ( b = 0; b < lightSamples; ++b )
@@ -2322,7 +2324,8 @@ void IlluminateRawLightmap( int rawLightmapNum ){
 	surfaceInfo_t       *info;
 	bool filterColor, filterDir;
 	float               samples, filterRadius, weight;
-	Vector3 averageColor, averageDir;
+	Vector3 averageColor;
+	Vector5 averageDir;
 	float tests[ 4 ][ 2 ] = { { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 } };
 	trace_t trace;
 	SuperLuxel stackLightLuxels[ 64 * 64 ];
@@ -2470,7 +2473,9 @@ void IlluminateRawLightmap( int rawLightmapNum ){
 						// use AT LEAST this amount of contribution from ambient for the deluxemap, fixes points that receive ZERO light
 						const float brightness = std::max( 0.00390625f, RGBTOGRAY( ambientColor ) * ( 1.0f / 255.0f ) );
 
-						lm->getSuperDeluxel( 0, x, y ) = lm->getSuperNormal( x, y ) * brightness;
+						lm->getSuperDeluxel( 0, x, y ).vec3() = lm->getSuperNormal( x, y ) * brightness;
+						lm->getSuperDeluxel( 0, x, y ).w() = 100.0f * brightness; // idk, what are we supposed to set here?
+						lm->getSuperDeluxel( 0, x, y ).v() = brightness;
 					}
 					luxel.count = 1.0f;
 				}
@@ -2661,7 +2666,7 @@ void IlluminateRawLightmap( int rawLightmapNum ){
 									continue;
 								}
 								SuperLuxel& lightLuxel = tmplm.getSuperLuxel( 0, sx, sy );
-								Vector3* lightDeluxel = &tmplm.getSuperDeluxel( 0, sx, sy );
+								Vector5* lightDeluxel = &tmplm.getSuperDeluxel( 0, sx, sy );
 								const Vector3& origin = lm->getSuperOrigin( sx, sy );
 
 								/* only subsample shadowed luxels */
@@ -3064,7 +3069,7 @@ void IlluminateVertexes( int num ){
 	int lightmapNum, numAvg;
 	float samples, dirt;
 	Vector3 colors[ MAX_LIGHTMAPS ], avgColors[ MAX_LIGHTMAPS ];
-	Vector3 dirs[ MAX_LIGHTMAPS ], avgDirs[ MAX_LIGHTMAPS ];
+	Vector5 dirs[ MAX_LIGHTMAPS ], avgDirs[ MAX_LIGHTMAPS ];
 	bspDrawSurface_t    *ds;
 	surfaceInfo_t       *info;
 	rawLightmap_t       *lm;
@@ -3291,7 +3296,9 @@ void IlluminateVertexes( int num ){
 				// use AT LEAST this amount of contribution from ambient for the deluxemap, fixes points that receive ZERO light
 				const float brightness = std::max( 0.00390625f, RGBTOGRAY( ambientColor ) * ( 1.0f / 255.0f ) );
 
-				avgDirs[ lightmapNum ] = verts[0].normal * brightness; // this seems bad tbh
+				avgDirs[ lightmapNum ].vec3() = verts[0].normal * brightness; // this seems bad tbh
+				avgDirs[ lightmapNum ].w() = 100.0f * brightness; // hm?
+				avgDirs[ lightmapNum ].v() = brightness;
 			}
 		}
 
@@ -3424,7 +3431,7 @@ void IlluminateVertexes( int num ){
 							radVertLuxel += luxel.value;
 							samples += luxel.count;
 							if(deluxemap){
-								const Vector3& deluxel = lm->getSuperDeluxel( lightmapNum, sx, sy );
+								const Vector5& deluxel = lm->getSuperDeluxel( lightmapNum, sx, sy );
 								getRadVertexDeluxel(lightmapNum, ds->firstVert + i) += deluxel;
 							}
 						}
@@ -4217,7 +4224,9 @@ static void FloodlightIlluminateLightmap( rawLightmap_t *lm ){
 					const float brightness = std::max( 0.00390625f, RGBTOGRAY( floodlight.value ) * ( 1.0f / 255.0f ) * floodlight.scale );
 
 					const Vector3 lightvector = lm->getSuperNormal( x, y ) * brightness;
-					lm->getSuperDeluxel( lightmapNum, x, y ) += lightvector;
+					lm->getSuperDeluxel( lightmapNum, x, y ).vec3() += lightvector;
+					lm->getSuperDeluxel( lightmapNum, x, y ).w() += 100.0f * brightness; // ? what is the distance supposed to be? idk lets say 100
+					lm->getSuperDeluxel( lightmapNum, x, y ).v() += brightness; 
 				}
 			}
 		}

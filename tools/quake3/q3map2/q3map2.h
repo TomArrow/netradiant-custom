@@ -185,6 +185,7 @@ enum class EBrushType
 
 #define EXTERNAL_LIGHTMAP       "lm_%04d.tga"
 #define EXTERNAL_HDR_LIGHTMAP	"lm_%04d.hdr"
+#define EXTERNAL_HDR_LIGHTMAP_DIST	"lm_%04d_dist.hdr"
 #define EXTERNAL_HDR_LIGHTGRID	"lightgrid.raw"
 #define EXTERNAL_HDR_VERTCOLORS	"vertlightDeluxe.raw"
 #define EXTERNAL_MULTISTYLE_SURFACES	"manyStyleSurfaces.raw"
@@ -1283,7 +1284,7 @@ struct trace_t
 
 	/* input and output */
 	Vector3 color;                      /* starts out at full color, may be reduced if transparent surfaces are crossed */
-	Vector3 directionContribution;      /* result contribution to the deluxe map */
+	Vector5 directionContribution;      /* result contribution to the deluxe map */
 
 	/* output */
 	Vector3 hit;
@@ -1339,6 +1340,7 @@ struct outLightmap_t
 
 	float* bspLightFloats; // for HDR Lightmaps
 	float* bspDeLightFloats; // for HDR deluxe maps
+	float* bspDeLightDistFloats; // for HDR deluxe maps (distance variant)
 };
 
 struct SuperLuxel{
@@ -1395,8 +1397,8 @@ struct rawLightmap_t
 	float                   *superDirt;
 	int                     *superClusters;
 
-	Vector3                 *superDeluxels[MAX_LIGHTMAPS]; /* average light direction */
-	Vector3                 *bspDeluxels[MAX_LIGHTMAPS];
+	Vector5                 *superDeluxels[MAX_LIGHTMAPS]; /* average light direction */
+	Vector5                 *bspDeluxels[MAX_LIGHTMAPS];
 	SuperFloodLight         *superFloodLight;
 	Vector3& getBspLuxel( int lightmapNum, int x, int y ){
 		return bspLuxels[ lightmapNum ][y * w + x];
@@ -1446,16 +1448,16 @@ struct rawLightmap_t
 	const int& getSuperCluster( int x, int y ) const {
 		return superClusters[y * sw + x];
 	}
-	Vector3& getSuperDeluxel(int lightmapNum, int x, int y ){
+	Vector5& getSuperDeluxel(int lightmapNum, int x, int y ){
 		return superDeluxels[lightmapNum][y * sw + x];
 	}
-	const Vector3& getSuperDeluxel(int lightmapNum,  int x, int y ) const {
+	const Vector5& getSuperDeluxel(int lightmapNum,  int x, int y ) const {
 		return superDeluxels[lightmapNum][y * sw + x];
 	}
-	Vector3& getBspDeluxel(int lightmapNum, int x, int y ){
+	Vector5& getBspDeluxel(int lightmapNum, int x, int y ){
 		return bspDeluxels[lightmapNum][y * w + x];
 	}
-	const Vector3& getBspDeluxel(int lightmapNum, int x, int y ) const {
+	const Vector5& getBspDeluxel(int lightmapNum, int x, int y ) const {
 		return bspDeluxels[lightmapNum][y * w + x];
 	}
 	SuperFloodLight& getSuperFloodLight( int x, int y ){
@@ -1801,7 +1803,7 @@ int                         VisMain( Args& args );
 /* light.c  */
 float                       PointToPolygonFormFactor( const Vector3& point, const Vector3& normal, const winding_t& w );
 int                         LightContributionToSample( trace_t *trace );
-void                        LightingAtSample( trace_t * trace, byte styles[ MAX_LIGHTMAPS ], Vector3 (&colors)[ MAX_LIGHTMAPS ], Vector3 (&dirs)[ MAX_LIGHTMAPS ]);
+void                        LightingAtSample( trace_t * trace, byte styles[ MAX_LIGHTMAPS ], Vector3 (&colors)[ MAX_LIGHTMAPS ], Vector5 (&dirs)[ MAX_LIGHTMAPS ]);
 int                         LightMain( Args& args );
 
 
@@ -2266,8 +2268,8 @@ inline int                *sortLightmaps;
 /* vertex luxels */
 inline Vector3            *vertexLuxels[ MAX_LIGHTMAPS ];
 inline Vector3            *radVertexLuxels[ MAX_LIGHTMAPS ];
-inline Vector3            *vertexDeluxels[ MAX_LIGHTMAPS ];
-inline Vector3            *radVertexDeluxels[ MAX_LIGHTMAPS ];
+inline Vector5            *vertexDeluxels[ MAX_LIGHTMAPS ];
+inline Vector5            *radVertexDeluxels[ MAX_LIGHTMAPS ];
 
 inline Vector3& getVertexLuxel( int lightmapNum, int vertexNum ){
 	return vertexLuxels[lightmapNum][vertexNum];
@@ -2275,10 +2277,10 @@ inline Vector3& getVertexLuxel( int lightmapNum, int vertexNum ){
 inline Vector3& getRadVertexLuxel( int lightmapNum, int vertexNum ){
 	return radVertexLuxels[lightmapNum][vertexNum];
 }
-inline Vector3& getVertexDeluxel( int lightmapNum, int vertexNum ){
+inline Vector5& getVertexDeluxel( int lightmapNum, int vertexNum ){
 	return vertexDeluxels[lightmapNum][vertexNum];
 }
-inline Vector3& getRadVertexDeluxel( int lightmapNum, int vertexNum ){
+inline Vector5& getRadVertexDeluxel( int lightmapNum, int vertexNum ){
 	return radVertexDeluxels[lightmapNum][vertexNum];
 }
 

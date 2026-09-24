@@ -1856,6 +1856,8 @@ static void SetupOutLightmap( rawLightmap_t *lm, outLightmap_t *olm ){
 		if (hdr) {
 			olm->bspDeLightFloats = (float*)safe_malloc(sizeof(float) * olm->customWidth * olm->customHeight * 4);
 			memset(olm->bspDeLightFloats, 0, sizeof(float) * olm->customWidth * olm->customHeight * 4);
+			olm->bspDeLightDistFloats = (float*)safe_malloc(sizeof(float) * olm->customWidth * olm->customHeight * 4);
+			memset(olm->bspDeLightDistFloats, 0, sizeof(float) * olm->customWidth * olm->customHeight * 4);
 		}
 	}
 }
@@ -2174,11 +2176,13 @@ static void FindOutLightmaps( rawLightmap_t *lm, bool fastAllocate ){
 				/* store direction */
 				if ( deluxemap ) {
 					/* normalize average light direction */
-					const Vector3 direction = VectorNormalized( lm->getBspDeluxel( lightmapNum,  x, y ) * 1000.0f );
+					const Vector5& deluxel = lm->getBspDeluxel( lightmapNum,  x, y );
+					const Vector3 direction = VectorNormalized(  deluxel.vec3() * 1000.0f );
 					olm->bspDirBytes[ oy * olm->customWidth + ox ] = direction * 127.5f + Vector3( 127.5f );
 
 					if (hdr)
 					{
+						const float log2 = logf(2);
 						/* store hdr color */
 						//float* hdrColor = lm->getBspLuxel(lightmapNum, x, y); //BSP_LUXEL(lightmapNum, x, y);
 						//Vector3& hdrColor = lm->getBspDeluxel(x, y); //BSP_LUXEL(lightmapNum, x, y);
@@ -2186,6 +2190,11 @@ static void FindOutLightmaps( rawLightmap_t *lm, bool fastAllocate ){
 						HDRpixel[0] = direction[0] * 0.5f + 0.5f;
 						HDRpixel[1] = direction[1] * 0.5f + 0.5f;
 						HDRpixel[2] = direction[2] * 0.5f + 0.5f;
+						HDRpixel[3] = 1.0f;
+						HDRpixel = olm->bspDeLightDistFloats + (4 * ((oy * olm->customWidth) + ox));
+						HDRpixel[0] = deluxel.v() > 0 ? deluxel.w() / deluxel.v() : 0; // to be used as light distance encoded in alpha (game engine should load it like that)
+						HDRpixel[1] = 100.0f*logf(deluxel.v()*1000.0f+1)/log2; // so we can potentially reconstruct light amount if needed for some strange reason? might ditch this later if no use is found.
+						HDRpixel[2] = 0.0f;
 						HDRpixel[3] = 1.0f;
 						//ColorScaleHDR(hdrColor, HDRpixel, lm->brightness, false); // todo this isnt gonna work well with hdrLightmapInverseSrgb... bring hdrLightmapInverseSrgb back into it somehow
 						//ColorScaleHDR(hdrColor, HDRpixel, lm->brightness, false);
@@ -2369,7 +2378,8 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 	int i, j, k, x, y, lx, ly, sx, sy, mappedSamples;
 	int style, lightmapNum, lightmapNum2;
 	float               samples, occludedSamples;
-	Vector3 sample, occludedSample, dirSample;
+	Vector3 sample, occludedSample;
+	Vector5 dirSample;
 	byte                *lb;
 	int numUsed, numTwins, numTwinLuxels, numStored;
 	float lmx, lmy, efficiency;
@@ -2708,9 +2718,9 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 					Vector3& bspLuxel2 = lm->getBspLuxel( lightmapNum, lm->w - 1, y );
 					bspLuxel = bspLuxel2 = vector3_mid( bspLuxel, bspLuxel2 );
 					if ( deluxemap /*&& lightmapNum == 0*/ ) {
-						Vector3& bspDeluxel = lm->getBspDeluxel( lightmapNum, 0, y );
-						Vector3& bspDeluxel2 = lm->getBspDeluxel( lightmapNum, lm->w - 1, y );
-						bspDeluxel = bspDeluxel2 = vector3_mid( bspDeluxel, bspDeluxel2 );
+						Vector5& bspDeluxel = lm->getBspDeluxel( lightmapNum, 0, y );
+						Vector5& bspDeluxel2 = lm->getBspDeluxel( lightmapNum, lm->w - 1, y );
+						bspDeluxel = bspDeluxel2 = vector5_mid( bspDeluxel, bspDeluxel2 );
 					}
 				}
 			}
@@ -2722,9 +2732,9 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 					bspLuxel = vector3_mid( bspLuxel, bspLuxel2 );
 					bspLuxel2 = bspLuxel;
 					if ( deluxemap/* && lightmapNum == 0*/ ) {
-						Vector3& bspDeluxel = lm->getBspDeluxel( lightmapNum, x, 0 );
-						Vector3& bspDeluxel2 = lm->getBspDeluxel( lightmapNum, x, lm->h - 1 );
-						bspDeluxel = bspDeluxel2 = vector3_mid( bspDeluxel, bspDeluxel2 );
+						Vector5& bspDeluxel = lm->getBspDeluxel( lightmapNum, x, 0 );
+						Vector5& bspDeluxel2 = lm->getBspDeluxel( lightmapNum, x, lm->h - 1 );
+						bspDeluxel = bspDeluxel2 = vector5_mid( bspDeluxel, bspDeluxel2 );
 					}
 				}
 			}
@@ -2760,7 +2770,7 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 						for ( x = 0; x < lm->sw; x++ )
 						{
 							/* get normal and deluxel */
-							Vector3& bspDeluxel = lm->getBspDeluxel( lightmapNum, x, y );
+							Vector5& bspDeluxel = lm->getBspDeluxel( lightmapNum, x, y );
 
 							/* get normal */
 							const Vector3 myNormal = lm->getSuperNormal( x, y );
@@ -2792,7 +2802,9 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 							VectorNormalize( myBinormal );
 
 							/* convert modelspace deluxel to tangentspace */
-							dirSample = VectorNormalized( bspDeluxel );
+							dirSample.vec3() = VectorNormalized( bspDeluxel.vec3() );
+							dirSample.w() = bspDeluxel.w();
+							dirSample.v() = bspDeluxel.v();
 
 							/* fix tangents to world matrix */
 							if ( myNormal.x() > 0 || myNormal.y() < 0 || myNormal.z() < 0 ) {
@@ -2800,9 +2812,11 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 							}
 
 							/* build tangentspace vectors */
-							bspDeluxel[0] = vector3_dot( dirSample, myTangent );
-							bspDeluxel[1] = vector3_dot( dirSample, myBinormal );
-							bspDeluxel[2] = vector3_dot( dirSample, myNormal );
+							bspDeluxel[0] = vector3_dot( dirSample.vec3(), myTangent );
+							bspDeluxel[1] = vector3_dot( dirSample.vec3(), myBinormal );
+							bspDeluxel[2] = vector3_dot( dirSample.vec3(), myNormal );
+							bspDeluxel[3] = dirSample[3];
+							bspDeluxel[4] = dirSample[4];
 						}
 					}
 				}
@@ -2974,6 +2988,7 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 					free( outLightmaps[i].bspLightFloats );
 					if (deluxemap) {
 						free(outLightmaps[i].bspDeLightFloats);
+						free(outLightmaps[i].bspDeLightDistFloats);
 					}
 				}
 			}
@@ -3109,6 +3124,13 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 
 						//stbi_flip_vertically_on_write(1);
 						int exportStatus = stbi_write_hdr(filename, olm->customWidth, olm->customHeight, 4, olm->bspDeLightFloats);
+
+						/* write HDR lightmap */
+						sprintf(filename, "%s/" EXTERNAL_HDR_LIGHTMAP_DIST, dirname, numExtLightmaps);
+						Sys_FPrintf(SYS_VRB, "\nwriting %s", filename);
+
+						//stbi_flip_vertically_on_write(1);
+						exportStatus = stbi_write_hdr(filename, olm->customWidth, olm->customHeight, 4, olm->bspDeLightDistFloats);
 					}
 
 					numExtLightmaps++;
@@ -3276,7 +3298,7 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 						color = getVertexLuxel( lightmapNum, ds->firstVert + j );
 
 						if(deluxemap){
-							dir = getVertexDeluxel( lightmapNum, ds->firstVert + j );
+							dir = getVertexDeluxel( lightmapNum, ds->firstVert + j ).vec3();
 							//VectorNormalize(dir);
 						}
 

@@ -198,6 +198,96 @@ public:
 	}
 };
 
+
+/// \brief A 5-element vector.
+template<typename Element>
+class BasicVector5
+{
+	Element m_elements[5];
+public:
+
+	BasicVector5(){
+	}
+	BasicVector5( Element x_, Element y_, Element z_, Element w_, Element v_ ){
+		x() = x_;
+		y() = y_;
+		z() = z_;
+		w() = w_;
+		v() = v_;
+	}
+	BasicVector5( const BasicVector3<Element>& self, Element w_, Element v_ ){
+		x() = self.x();
+		y() = self.y();
+		z() = self.z();
+		w() = w_;
+		v() = v_;
+	}
+	explicit BasicVector5( const Element& value ) : m_elements{ value, value, value, value, value }{
+	}
+
+	Element& x(){
+		return m_elements[0];
+	}
+	const Element& x() const {
+		return m_elements[0];
+	}
+	Element& y(){
+		return m_elements[1];
+	}
+	const Element& y() const {
+		return m_elements[1];
+	}
+	Element& z(){
+		return m_elements[2];
+	}
+	const Element& z() const {
+		return m_elements[2];
+	}
+	Element& w(){
+		return m_elements[3];
+	}
+	const Element& w() const {
+		return m_elements[3];
+	}
+	Element& v(){
+		return m_elements[4];
+	}
+	const Element& v() const {
+		return m_elements[4];
+	}
+
+	Element index( std::size_t i ) const {
+		return m_elements[i];
+	}
+	Element& index( std::size_t i ){
+		return m_elements[i];
+	}
+	Element operator[]( std::size_t i ) const {
+		return m_elements[i];
+	}
+	Element& operator[]( std::size_t i ){
+		return m_elements[i];
+	}
+
+	Element* data(){
+		return m_elements;
+	}
+	const Element* data() const {
+		return m_elements;
+	}
+
+	BasicVector3<Element>& vec3(){
+		return reinterpret_cast<BasicVector3<Element>&>( x() );
+	}
+	const BasicVector3<Element>& vec3() const {
+		return reinterpret_cast<const BasicVector3<Element>&>( x() );
+	}
+
+	void set( const Element value ){
+		x() = y() = z() = w() = v() = value;
+	}
+};
+
 template<typename Element>
 inline BasicVector2<Element> vector2_from_array( const Element* array ){
 	return BasicVector2<Element>( array[0], array[1] );
@@ -247,6 +337,8 @@ typedef BasicVector3<double> DoubleVector3;
 /// \brief A 4-element vector stored in single-precision floating-point.
 typedef BasicVector4<float> Vector4;
 
+/// \brief A 5-element vector stored in single-precision floating-point.
+typedef BasicVector5<float> Vector5;
 
 template<typename TextOutputStreamType>
 inline TextOutputStreamType& ostream_write( TextOutputStreamType& outputStream, const Vector3& v ){
