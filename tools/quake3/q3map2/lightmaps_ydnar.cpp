@@ -33,6 +33,11 @@
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
+#if HDR_EXR
+#define TINYEXR_USE_STB_ZLIB 1
+#define TINYEXR_IMPLEMENTATION
+#include "tinyexr.h"
+#endif
 
 #include "bspfile_rbsp.h"
 #include "surface_extra.h"
@@ -1848,16 +1853,25 @@ static void SetupOutLightmap( rawLightmap_t *lm, outLightmap_t *olm ){
 
 	if (hdr) {
 		olm->bspLightFloats = (float*)safe_malloc(sizeof(float) * olm->customWidth * olm->customHeight * 4);
-		memset(olm->bspLightFloats, 0, sizeof(float) * olm->customWidth * olm->customHeight * 4);
+		for(int i=0;i<olm->customWidth * olm->customHeight * 4;i+=4){
+			olm->bspLightFloats[i + 0] = 0.0f;
+			olm->bspLightFloats[i + 1] = 0.0f;
+			olm->bspLightFloats[i + 2] = 0.0f;
+			olm->bspLightFloats[i + 3] = 1.0f;
+		}
 	}
 
 	if ( deluxemap ) {
 		olm->bspDirBytes = safe_calloc( olm->customWidth * olm->customHeight * sizeof( *olm->bspDirBytes ) );
 		if (hdr) {
 			olm->bspDeLightFloats = (float*)safe_malloc(sizeof(float) * olm->customWidth * olm->customHeight * 4);
-			memset(olm->bspDeLightFloats, 0, sizeof(float) * olm->customWidth * olm->customHeight * 4);
 			olm->bspDeLightDistFloats = (float*)safe_malloc(sizeof(float) * olm->customWidth * olm->customHeight * 4);
-			memset(olm->bspDeLightDistFloats, 0, sizeof(float) * olm->customWidth * olm->customHeight * 4);
+			for(int i=0;i<olm->customWidth * olm->customHeight * 4;i+=4){
+				olm->bspDeLightFloats[i + 0] = olm->bspDeLightDistFloats[i + 0] = 0.0f;
+				olm->bspDeLightFloats[i + 1] = olm->bspDeLightDistFloats[i + 1] = 0.0f;
+				olm->bspDeLightFloats[i + 2] = olm->bspDeLightDistFloats[i + 2] = 0.0f;
+				olm->bspDeLightFloats[i + 3] = olm->bspDeLightDistFloats[i + 3] = 1.0f;
+			}
 		}
 	}
 }
@@ -2192,9 +2206,16 @@ static void FindOutLightmaps( rawLightmap_t *lm, bool fastAllocate ){
 						HDRpixel[2] = direction[2] * 0.5f + 0.5f;
 						HDRpixel[3] = 1.0f;
 						HDRpixel = olm->bspDeLightDistFloats + (4 * ((oy * olm->customWidth) + ox));
+#if HDR_EXR
+						// with exr we don't need to worry about the common RGBE exponent, so we can just save the values as what they actually are
+						HDRpixel[0] = deluxel.v() > 0 ? deluxel.w() / deluxel.v() : 0; // to be used as light distance encoded in alpha (game engine should load it like that)
+						HDRpixel[1] = deluxel.v(); // so we can potentially reconstruct light amount if needed for some strange reason? might ditch this later if no use is found.
+						HDRpixel[2] = deluxel.v() > 0 ? vector3_length(deluxel.vec3()) / deluxel.v() : 0; // directionality
+#else
 						HDRpixel[0] = deluxel.v() > 0 ? deluxel.w() / deluxel.v() : 0; // to be used as light distance encoded in alpha (game engine should load it like that)
 						HDRpixel[1] = 100.0f*logf(deluxel.v()*1000.0f+1)/log2; // so we can potentially reconstruct light amount if needed for some strange reason? might ditch this later if no use is found.
 						HDRpixel[2] = deluxel.v() > 0 ? 1000.0f* vector3_length(deluxel.vec3()) / deluxel.v() : 0; // directionality
+#endif
 						HDRpixel[3] = 1.0f;
 						//ColorScaleHDR(hdrColor, HDRpixel, lm->brightness, false); // todo this isnt gonna work well with hdrLightmapInverseSrgb... bring hdrLightmapInverseSrgb back into it somehow
 						//ColorScaleHDR(hdrColor, HDRpixel, lm->brightness, false);
@@ -2365,6 +2386,18 @@ static void FillOutLightmap( outLightmap_t *olm ){
 	if ( deluxemap ) {
 		free( dirBytesNew );
 	}
+}
+
+
+int WriteEXR(char const *filename, int x, int y, int comp, const float *data)
+{
+	const char* err = NULL;
+	int status = SaveEXR(data,x,y,comp,1,filename,&err);
+	if(err){
+		Sys_FPrintf( SYS_ERR, "\nerror writing %s: %s", filename, err );
+		FreeEXRErrorMessage(err);
+	}
+	return status;
 }
 
 #define HDR_VERTVERSION 2
@@ -3106,7 +3139,11 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 					Sys_FPrintf(SYS_VRB, "\nwriting %s", filename);
 
 					//stbi_flip_vertically_on_write(1);
+#if HDR_EXR
+					int exportStatus = WriteEXR(filename, olm->customWidth, olm->customHeight, 4, olm->bspLightFloats);
+#else 
 					int exportStatus = stbi_write_hdr(filename, olm->customWidth, olm->customHeight, 4, olm->bspLightFloats);
+#endif
 				}
 
 				numExtLightmaps++;
@@ -3124,14 +3161,22 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 						Sys_FPrintf(SYS_VRB, "\nwriting %s", filename);
 
 						//stbi_flip_vertically_on_write(1);
+#if HDR_EXR
+						int exportStatus = WriteEXR(filename, olm->customWidth, olm->customHeight, 4, olm->bspDeLightFloats);
+#else 
 						int exportStatus = stbi_write_hdr(filename, olm->customWidth, olm->customHeight, 4, olm->bspDeLightFloats);
+#endif
 
 						/* write HDR lightmap */
 						sprintf(filename, "%s/" EXTERNAL_HDR_LIGHTMAP_DIST, dirname, numExtLightmaps);
 						Sys_FPrintf(SYS_VRB, "\nwriting %s", filename);
 
 						//stbi_flip_vertically_on_write(1);
+#if HDR_EXR
+						exportStatus = WriteEXR(filename, olm->customWidth, olm->customHeight, 4, olm->bspDeLightDistFloats);
+#else 
 						exportStatus = stbi_write_hdr(filename, olm->customWidth, olm->customHeight, 4, olm->bspDeLightDistFloats);
+#endif
 					}
 
 					numExtLightmaps++;
