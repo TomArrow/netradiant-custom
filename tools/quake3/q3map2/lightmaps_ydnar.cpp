@@ -2818,7 +2818,7 @@ void StoreSurfaceLightmaps( bool fastAllocate, bool storeForReal ){
 								else if ( myNormal.z() == -1.0f ) {
 									myTangent = -g_vector3_axis_x;
 									myBinormal = g_vector3_axis_y;
-								}
+								} // huh what happens if its 0.9999f?
 							}
 							else
 							{

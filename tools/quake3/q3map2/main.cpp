@@ -33,6 +33,10 @@
 #include "autopk3.h"
 #include "timer.h"
 
+#if defined( WIN32 )
+#include <windows.h>
+#include <processthreadsapi.h>
+#endif
 
 
 static void new_handler(){
@@ -62,6 +66,9 @@ int main( int argc, char **argv ){
 
 #ifdef WIN32
 	_setmaxstdio( 2048 );
+	if (!SetPriorityClass(GetCurrentProcess(), PROCESS_MODE_BACKGROUND_BEGIN)) {
+		SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
+	}
 #endif
 
 	/* we want consistent 'randomness' */
