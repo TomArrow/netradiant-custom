@@ -66,9 +66,6 @@ int main( int argc, char **argv ){
 
 #ifdef WIN32
 	_setmaxstdio( 2048 );
-	if (!SetPriorityClass(GetCurrentProcess(), PROCESS_MODE_BACKGROUND_BEGIN)) {
-		SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
-	}
 #endif
 
 	/* we want consistent 'randomness' */
@@ -111,6 +108,13 @@ int main( int argc, char **argv ){
 			force = true;
 		}
 
+#if defined( WIN32 )
+		/* background worker priority */
+		while ( args.takeArg( "-background" ) ) {
+			background = true;
+		}
+#endif
+
 		/* patch subdivisions */
 		while ( args.takeArg( "-subdivisions" ) ) {
 			patchSubdivisions = std::max( atoi( args.takeNext() ), 1 );
@@ -135,6 +139,12 @@ int main( int argc, char **argv ){
 			            max_shader_info, sizeof( shaderInfo_t ) * max_shader_info / ( 1024.f * 1024.f ) );
 		}
 	}
+
+#ifdef WIN32
+	if (!background || !SetPriorityClass(GetCurrentProcess(), PROCESS_MODE_BACKGROUND_BEGIN)) {
+		SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
+	}
+#endif
 
 	/* init model library */
 	assimp_init();

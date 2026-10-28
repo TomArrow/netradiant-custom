@@ -1946,6 +1946,11 @@ inline bool lightmapsAsTexcoord;
 inline bool force;
 inline int patchSubdivisions = 8;                       /* ydnar: -patchmeta subdivisions */
 
+#if defined( WIN32 )
+/* run as a background worker */
+inline bool background;
+#endif
+
 /* commandline arguments */
 inline bool verboseEntities;
 inline bool useCustomInfoParms;
